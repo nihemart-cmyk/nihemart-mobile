@@ -2,12 +2,17 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppMode, CartItem, Product, Order } from '@/types';
+import i18n from '@/locales/i18n';
+import { products as mockProducts } from '@/mocks/products';
 
 export const [AppProvider, useApp] = createContextHook(() => {
   const [mode, setMode] = useState<AppMode>('user');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [language, setLanguage] = useState<'en' | 'rw'>('en');
+  const [cachedProducts, setCachedProducts] = useState<Product[]>([]);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   useEffect(() => {
     loadPersistedData();
@@ -15,17 +20,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const loadPersistedData = async () => {
     try {
-      const [storedMode, storedCart, storedOrders] = await Promise.all([
+      const [storedMode, storedCart, storedOrders, storedLanguage, storedProducts] = await Promise.all([
         AsyncStorage.getItem('appMode'),
         AsyncStorage.getItem('cart'),
         AsyncStorage.getItem('orders'),
+        AsyncStorage.getItem('language'),
+        AsyncStorage.getItem('cachedProducts'),
       ]);
 
       if (storedMode) setMode(storedMode as AppMode);
       if (storedCart) setCart(JSON.parse(storedCart));
       if (storedOrders) setOrders(JSON.parse(storedOrders));
+      
+      if (storedLanguage) {
+        setLanguage(storedLanguage as 'en' | 'rw');
+        await i18n.changeLanguage(storedLanguage);
+      }
+      
+      if (storedProducts) {
+        setCachedProducts(JSON.parse(storedProducts));
+      } else {
+        setCachedProducts(mockProducts);
+        await AsyncStorage.setItem('cachedProducts', JSON.stringify(mockProducts));
+      }
     } catch (error) {
       console.log('Error loading persisted data:', error);
+      setCachedProducts(mockProducts);
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +143,27 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   }, [cart]);
 
+  const changeLanguage = useCallback(async (lang: 'en' | 'rw') => {
+    setLanguage(lang);
+    await i18n.changeLanguage(lang);
+    try {
+      await AsyncStorage.setItem('language', lang);
+    } catch (error) {
+      console.log('Error saving language:', error);
+    }
+  }, []);
+
+  const refreshProducts = useCallback(async () => {
+    try {
+      setCachedProducts(mockProducts);
+      await AsyncStorage.setItem('cachedProducts', JSON.stringify(mockProducts));
+      setIsOffline(false);
+    } catch (error) {
+      console.log('Error refreshing products:', error);
+      setIsOffline(true);
+    }
+  }, []);
+
   return {
     mode,
     switchMode,
@@ -136,5 +177,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
     orders,
     placeOrder,
     isLoading,
+    language,
+    changeLanguage,
+    cachedProducts,
+    isOffline,
+    refreshProducts,
   };
 });

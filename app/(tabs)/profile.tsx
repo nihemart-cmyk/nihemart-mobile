@@ -1,32 +1,54 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
-import { User, MapPin, Phone, Mail, Settings, LogOut, Bike, Bell } from 'lucide-react-native';
+import { User, MapPin, Phone, Mail, Settings, LogOut, Bike, Bell, Languages } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import Colors from '@/constants/colors';
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfileScreen() {
-  const { mode, switchMode } = useApp();
+  const { mode, switchMode, language, changeLanguage } = useApp();
   const { scheduleLocalNotification } = useNotifications();
+  const { t } = useTranslation();
 
   const handleModeSwitch = (value: boolean) => {
     const newMode = value ? 'rider' : 'user';
     Alert.alert(
-      `Switch to ${newMode === 'rider' ? 'Rider' : 'User'} Mode?`,
-      `You will be switched to the ${newMode} panel.`,
+      `${t('profile.switchTo')} ${newMode === 'rider' ? t('profile.riderMode_short') : t('profile.userMode')} ${t('profile.mode')}?`,
+      `${t('profile.switchMessage')} ${newMode} ${t('profile.panel')}.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Switch',
+          text: t('common.confirm'),
           onPress: () => switchMode(newMode)
         }
       ]
     );
   };
 
+  const handleLanguageSwitch = () => {
+    Alert.alert(
+      t('profile.language'),
+      t('profile.languageSubtext'),
+      [
+        {
+          text: 'English',
+          onPress: () => changeLanguage('en'),
+          style: language === 'en' ? 'default' : 'cancel'
+        },
+        {
+          text: 'Ikinyarwanda',
+          onPress: () => changeLanguage('rw'),
+          style: language === 'rw' ? 'default' : 'cancel'
+        },
+        { text: t('common.cancel'), style: 'cancel' }
+      ]
+    );
+  };
+
   return (
     <>
-      <Stack.Screen options={{ title: 'Profile' }} />
+      <Stack.Screen options={{ title: t('profile.title') }} />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
@@ -39,14 +61,14 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
+          <Text style={styles.sectionTitle}>{t('profile.accountInfo')}</Text>
           
           <TouchableOpacity style={styles.infoCard}>
             <View style={styles.infoIcon}>
               <Phone size={20} color={Colors.primary} />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Phone Number</Text>
+              <Text style={styles.infoLabel}>{t('profile.phoneNumber')}</Text>
               <Text style={styles.infoValue}>+91 98765 43210</Text>
             </View>
           </TouchableOpacity>
@@ -56,7 +78,7 @@ export default function ProfileScreen() {
               <Mail size={20} color={Colors.primary} />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Email Address</Text>
+              <Text style={styles.infoLabel}>{t('profile.emailAddress')}</Text>
               <Text style={styles.infoValue}>john.doe@email.com</Text>
             </View>
           </TouchableOpacity>
@@ -66,14 +88,14 @@ export default function ProfileScreen() {
               <MapPin size={20} color={Colors.primary} />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Default Address</Text>
+              <Text style={styles.infoLabel}>{t('profile.defaultAddress')}</Text>
               <Text style={styles.infoValue}>123 Main St, City, State 123456</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
+          <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
           
           <View style={styles.settingCard}>
             <View style={styles.settingLeft}>
@@ -81,8 +103,8 @@ export default function ProfileScreen() {
                 <Bike size={20} color={Colors.secondary} />
               </View>
               <View>
-                <Text style={styles.settingLabel}>Rider Mode</Text>
-                <Text style={styles.settingSubtext}>Switch to delivery rider panel</Text>
+                <Text style={styles.settingLabel}>{t('profile.riderMode')}</Text>
+                <Text style={styles.settingSubtext}>{t('profile.riderModeSubtext')}</Text>
               </View>
             </View>
             <Switch
@@ -93,36 +115,48 @@ export default function ProfileScreen() {
             />
           </View>
 
+          <TouchableOpacity style={styles.menuItem} onPress={handleLanguageSwitch}>
+            <View style={styles.menuIcon}>
+              <Languages size={20} color={Colors.primary} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={styles.menuText}>{t('profile.language')}</Text>
+              <Text style={styles.menuSubtext}>
+                {language === 'en' ? 'English' : 'Ikinyarwanda'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
               scheduleLocalNotification(
-                'Test Notification',
-                'This is a test notification to demonstrate the notification system!',
+                t('notifications.testTitle'),
+                t('notifications.testMessage'),
                 {},
                 'system'
               );
-              Alert.alert('Success', 'Test notification sent!');
+              Alert.alert(t('common.done'), t('notifications.testSuccess'));
             }}
           >
             <View style={styles.menuIcon}>
               <Bell size={20} color={Colors.primary} />
             </View>
-            <Text style={styles.menuText}>Test Notification</Text>
+            <Text style={styles.menuText}>{t('profile.testNotification')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuIcon}>
               <Settings size={20} color={Colors.text} />
             </View>
-            <Text style={styles.menuText}>App Settings</Text>
+            <Text style={styles.menuText}>{t('profile.appSettings')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuIcon}>
               <LogOut size={20} color={Colors.error} />
             </View>
-            <Text style={[styles.menuText, { color: Colors.error }]}>Logout</Text>
+            <Text style={[styles.menuText, { color: Colors.error }]}>{t('profile.logout')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -266,5 +300,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
     fontWeight: '500' as const,
+  },
+  menuContent: {
+    flex: 1,
+  },
+  menuSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import React, { useEffect, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -9,14 +9,43 @@ import Colors from "@/constants/colors";
 import CustomSplashScreen from "@/components/SplashScreen";
 import InAppNotificationBanner from "@/components/InAppNotificationBanner";
 import { useFonts } from 'expo-font';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import '@/locales/i18n';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const router = useRouter();
+  const segments = useSegments();
+  const [hasCheckedLanguage, setHasCheckedLanguage] = useState(false);
+
+  useEffect(() => {
+    const checkLanguageSelection = async () => {
+      try {
+        const hasSelectedLanguage = await AsyncStorage.getItem('hasSelectedLanguage');
+        
+        if (!hasSelectedLanguage && segments[0] !== 'language-select') {
+          router.replace('/language-select');
+        }
+      } catch (error) {
+        console.log('Error checking language selection:', error);
+      } finally {
+        setHasCheckedLanguage(true);
+      }
+    };
+
+    checkLanguageSelection();
+  }, []);
+
+  if (!hasCheckedLanguage) {
+    return null;
+  }
+
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen name="language-select" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="rider" options={{ headerShown: false }} />
       <Stack.Screen 

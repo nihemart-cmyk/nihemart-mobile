@@ -5,34 +5,36 @@ import { useApp } from '@/contexts/AppContext';
 import Colors from '@/constants/colors';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function CartScreen() {
   const { cart, updateCartQuantity, removeFromCart, cartTotal, placeOrder } = useApp();
   const router = useRouter();
+  const { t } = useTranslation();
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      Alert.alert('Empty Cart', 'Please add items to cart before checkout');
+      Alert.alert(t('cart.empty'), t('cart.emptyMessage'));
       return;
     }
 
     Alert.alert(
-      'Confirm Order',
-      `Total Amount: ₹${cartTotal}\n\nDelivery address will be set to default address.`,
+      t('checkout.title'),
+      `${t('cart.total')}: ₹${cartTotal}\n\n${t('checkout.deliveryAddress')}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Confirm',
+          text: t('common.confirm'),
           onPress: async () => {
             setIsPlacingOrder(true);
             try {
               await placeOrder('Default Address: 123 Main St, City, State 123456');
-              Alert.alert('Success', 'Order placed successfully!', [
+              Alert.alert(t('checkout.orderPlaced'), t('checkout.orderSuccess'), [
                 { text: 'OK', onPress: () => router.push('/orders' as any) }
               ]);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to place order. Please try again.');
+            } catch {
+              Alert.alert(t('common.error'), 'Failed to place order. Please try again.');
             } finally {
               setIsPlacingOrder(false);
             }
@@ -44,11 +46,11 @@ export default function CartScreen() {
 
   const handleRemove = (productId: string, productName: string) => {
     Alert.alert(
-      'Remove Item',
-      `Remove ${productName} from cart?`,
+      t('cart.remove'),
+      `${t('cart.remove')} ${productName}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeFromCart(productId) }
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('cart.remove'), style: 'destructive', onPress: () => removeFromCart(productId) }
       ]
     );
   };
@@ -56,16 +58,16 @@ export default function CartScreen() {
   if (cart.length === 0) {
     return (
       <>
-        <Stack.Screen options={{ title: 'Shopping Cart' }} />
+        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.emptyContainer}>
           <ShoppingBag size={64} color={Colors.textSecondary} />
-          <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptyText}>Add products to get started</Text>
+          <Text style={styles.emptyTitle}>{t('cart.empty')}</Text>
+          <Text style={styles.emptyText}>{t('cart.emptyMessage')}</Text>
           <TouchableOpacity 
             style={styles.shopButton}
             onPress={() => router.push('/(tabs)' as any)}
           >
-            <Text style={styles.shopButtonText}>Start Shopping</Text>
+            <Text style={styles.shopButtonText}>{t('home.viewAll')}</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -74,7 +76,7 @@ export default function CartScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Shopping Cart' }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {cart.map((item) => (
@@ -119,7 +121,7 @@ export default function CartScreen() {
 
         <View style={styles.footer}>
           <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Total Amount:</Text>
+            <Text style={styles.totalLabel}>{t('cart.total')}:</Text>
             <Text style={styles.totalAmount}>₹{cartTotal}</Text>
           </View>
           <TouchableOpacity 
@@ -128,7 +130,7 @@ export default function CartScreen() {
             disabled={isPlacingOrder}
           >
             <Text style={styles.checkoutButtonText}>
-              {isPlacingOrder ? 'Placing Order...' : 'Proceed to Checkout'}
+              {isPlacingOrder ? t('common.loading') : t('cart.proceedToCheckout')}
             </Text>
           </TouchableOpacity>
         </View>

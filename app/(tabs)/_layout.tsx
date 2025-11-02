@@ -1,20 +1,24 @@
-import { Tabs, Redirect } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Home, Grid3x3, ShoppingCart, Package, User } from "lucide-react-native";
 import React from "react";
 import Colors from "@/constants/colors";
 import Fonts from "@/constants/fonts";
 import { useApp } from "@/contexts/AppContext";
 import NotificationBell from "@/components/NotificationBell";
+import { useTranslation } from 'react-i18next';
 
 export default function TabLayout() {
   const { mode, isLoading } = useApp();
+  const { t } = useTranslation();
+  const router = useRouter();
 
   if (isLoading) {
     return null;
   }
 
   if (mode === 'rider') {
-    return <Redirect href="/rider" />;
+    router.replace('/rider' as any);
+    return null;
   }
 
   return (
@@ -44,7 +48,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t('tabs.home'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
@@ -52,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="categories"
         options={{
-          title: "Categories",
+          title: t('tabs.categories'),
           headerRight: () => <NotificationBell />,
           tabBarIcon: ({ color, size }) => <Grid3x3 size={size} color={color} />,
         }}
@@ -60,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="cart"
         options={{
-          title: "Cart",
+          title: t('tabs.cart'),
           headerRight: () => <NotificationBell />,
           tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
         }}
@@ -68,7 +72,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="orders"
         options={{
-          title: "Orders",
+          title: t('tabs.orders'),
           headerRight: () => <NotificationBell />,
           tabBarIcon: ({ color, size }) => <Package size={size} color={color} />,
         }}
@@ -76,7 +80,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t('tabs.profile'),
           headerRight: () => <NotificationBell />,
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}

@@ -1,30 +1,38 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { Search, ShoppingBag, TrendingUp } from 'lucide-react-native';
+import { Search, ShoppingBag, TrendingUp, WifiOff } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { categories } from '@/mocks/categories';
-import { products } from '@/mocks/products';
 import Colors from '@/constants/colors';
 import Fonts from '@/constants/fonts';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const { cartItemsCount } = useApp();
+  const { cartItemsCount, cachedProducts, isOffline } = useApp();
   const router = useRouter();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  const products = cachedProducts;
   const featuredProducts = products.filter(p => p.discountPrice).slice(0, 6);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Hello!</Text>
-            <Text style={styles.welcomeText}>Welcome to Nihemart</Text>
+            <Text style={styles.welcomeText}>{t('home.welcome')}</Text>
+            {isOffline && (
+              <View style={styles.offlineBadge}>
+                <WifiOff size={12} color={Colors.white} />
+                <Text style={styles.offlineText}>{t('common.offline')}</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity 
             style={styles.cartButton}
@@ -43,7 +51,7 @@ export default function HomeScreen() {
           <Search size={20} color={Colors.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search products..."
+            placeholder={t('home.searchPlaceholder')}
             placeholderTextColor={Colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -57,9 +65,9 @@ export default function HomeScreen() {
       >
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Categories</Text>
+            <Text style={styles.sectionTitle}>{t('categories.title')}</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/categories' as any)}>
-              <Text style={styles.seeAll}>See All</Text>
+              <Text style={styles.seeAll}>{t('home.viewAll')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView 
@@ -90,7 +98,7 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <View style={styles.titleWithIcon}>
               <TrendingUp size={20} color={Colors.secondary} />
-              <Text style={styles.sectionTitle}>Hot Deals</Text>
+              <Text style={styles.sectionTitle}>{t('home.deals')}</Text>
             </View>
           </View>
           <View style={styles.productsGrid}>
@@ -132,9 +140,9 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>All Products</Text>
+            <Text style={styles.sectionTitle}>{t('home.allProducts')}</Text>
             <TouchableOpacity onPress={() => router.push('/products' as any)}>
-              <Text style={styles.seeAll}>See All</Text>
+              <Text style={styles.seeAll}>{t('home.viewAll')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.productsGrid}>
@@ -220,6 +228,18 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12,
     fontFamily: Fonts.bold,
+  },
+  offlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  offlineText: {
+    fontSize: 12,
+    color: Colors.white,
+    opacity: 0.9,
+    fontFamily: Fonts.medium,
   },
   searchContainer: {
     flexDirection: 'row',
