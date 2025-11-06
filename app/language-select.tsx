@@ -54,48 +54,68 @@ export default function LanguageSelectScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Animated.View 
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
+    <SafeAreaView className="flex-1" style={{ backgroundColor: Colors.background }} edges={['top', 'bottom']}>
+      <Animated.View
+        className="flex-1 px-6 justify-center items-center"
+        style={{
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        }}
       >
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
+        <View className="mb-8">
+          <View
+            className="w-30 h-30 rounded-full items-center justify-center border-2"
+            style={{
+              backgroundColor: Colors.primary + '10',
+              borderColor: Colors.primary + '20',
+            }}
+          >
             <Globe size={64} color={Colors.primary} strokeWidth={1.5} />
           </View>
         </View>
 
-        <Text style={styles.title}>{t('languageSelection.title')}</Text>
-        <Text style={styles.subtitle}>{t('languageSelection.subtitle')}</Text>
+        <Text className="text-[28px] font-bold text-center mb-2" style={{ color: Colors.text }}>
+          {t('languageSelection.title')}
+        </Text>
+        <Text className="text-base text-center mb-12" style={{ color: Colors.textSecondary }}>
+          {t('languageSelection.subtitle')}
+        </Text>
 
-        <View style={styles.languageList}>
+        <View className="w-full max-w-[400px] gap-4 mb-8">
           {languages.map((language) => {
             const isSelected = selectedLanguage === language.code;
             return (
               <TouchableOpacity
                 key={language.code}
-                style={[
-                  styles.languageCard,
-                  isSelected && styles.languageCardSelected,
-                ]}
                 onPress={() => handleLanguageSelect(language.code)}
                 activeOpacity={0.7}
+                className={`flex-row items-center justify-between rounded-2xl p-5 border-2 shadow-sm 
+                ${isSelected ? 'bg-primary border-primary' : 'bg-white'} `}
+                style={{
+                  borderColor: isSelected ? Colors.primary : Colors.border,
+                  backgroundColor: isSelected ? Colors.primary : Colors.white,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                }}
               >
-                <View style={styles.languageInfo}>
-                  <Text style={[styles.languageName, isSelected && styles.languageNameSelected]}>
+                <View className="flex-1">
+                  <Text
+                    className={`text-[20px] font-semibold mb-1 ${isSelected ? 'text-white' : ''}`}
+                    style={!isSelected ? { color: Colors.text } : undefined}
+                  >
                     {language.nativeName}
                   </Text>
-                  <Text style={[styles.languageSubname, isSelected && styles.languageSubnameSelected]}>
+                  <Text
+                    className={`text-[14px] ${isSelected ? 'text-white opacity-90' : ''}`}
+                    style={!isSelected ? { color: Colors.textSecondary } : undefined}
+                  >
                     {language.name}
                   </Text>
                 </View>
                 {isSelected && (
-                  <View style={styles.checkContainer}>
+                  <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
                     <Check size={24} color={Colors.white} strokeWidth={3} />
                   </View>
                 )}
@@ -105,17 +125,28 @@ export default function LanguageSelectScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.continueButton}
           onPress={handleContinue}
           activeOpacity={0.8}
+          className="w-full max-w-[400px] items-center rounded-xl py-4 px-12 shadow-lg"
+          style={{
+            backgroundColor: Colors.secondary,
+            shadowColor: Colors.secondary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+          }}
         >
-          <Text style={styles.continueButtonText}>{t('languageSelection.continue')}</Text>
+          <Text className="text-lg font-bold" style={{ color: Colors.white }}>
+            {t('languageSelection.continue')}
+          </Text>
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
   );
 }
 
+// ORIGINAL STYLES (COMMENTED OUT FOR REFERENCE)
+/*
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -226,3 +257,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as const,
   },
 });
+*/

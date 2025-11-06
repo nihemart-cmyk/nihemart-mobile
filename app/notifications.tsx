@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   Animated,
@@ -63,37 +62,48 @@ function NotificationItem({ notification, onPress, onDelete }: NotificationItemP
   };
 
   return (
-    <Animated.View style={[styles.notificationWrapper, { opacity }]}>
+    <Animated.View className="overflow-hidden" style={{ opacity }}>
       <TouchableOpacity
-        style={[
-          styles.notificationItem,
-          !notification.read && styles.unreadNotification,
-        ]}
+        className={`flex-row items-start p-4 border-b ${!notification.read ? 'bg-[#FFF5F0]' : 'bg-white'}`}
+        style={{ borderBottomColor: Colors.border, borderBottomWidth: 1 }}
         onPress={onPress}
         activeOpacity={0.7}
       >
         <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: notification.read ? Colors.border : Colors.primary },
-          ]}
+          className="w-10 h-10 rounded-full justify-center items-center mr-3"
+          style={{ backgroundColor: notification.read ? Colors.border : Colors.primary }}
         >
           <IconComponent
             size={20}
             color={notification.read ? Colors.textSecondary : Colors.white}
           />
         </View>
-        <View style={styles.contentContainer}>
-          <Text style={styles.title} numberOfLines={1}>
+
+        <View className="flex-1 mr-2">
+          <Text
+            numberOfLines={1}
+            className="text-[16px] mb-1"
+            style={{ fontFamily: Fonts.semiBold, color: Colors.text }}
+          >
             {notification.title}
           </Text>
-          <Text style={styles.body} numberOfLines={2}>
+          <Text
+            numberOfLines={2}
+            className="text-[14px] mb-1 leading-5"
+            style={{ fontFamily: Fonts.regular, color: Colors.textSecondary }}
+          >
             {notification.body}
           </Text>
-          <Text style={styles.timestamp}>{formatTimestamp(notification.timestamp)}</Text>
+          <Text
+            className="text-[12px]"
+            style={{ fontFamily: Fonts.regular, color: Colors.textSecondary }}
+          >
+            {formatTimestamp(notification.timestamp)}
+          </Text>
         </View>
+
         <TouchableOpacity
-          style={styles.deleteButton}
+          className="p-1"
           onPress={handleDelete}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -140,7 +150,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: Colors.background }} edges={['bottom']}>
       <Stack.Screen
         options={{
           title: 'Notifications',
@@ -149,13 +159,13 @@ export default function NotificationsScreen() {
           headerTitleStyle: { fontFamily: Fonts.semiBold },
           headerRight: () =>
             notifications.length > 0 ? (
-              <View style={styles.headerActions}>
+              <View className="flex-row items-center gap-3 mr-2">
                 {unreadCount > 0 && (
-                  <TouchableOpacity onPress={markAllAsRead} style={styles.headerButton}>
+                  <TouchableOpacity onPress={markAllAsRead} className="p-1">
                     <CheckCheck size={20} color={Colors.white} />
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity onPress={handleClearAll} style={styles.headerButton}>
+                <TouchableOpacity onPress={handleClearAll} className="p-1">
                   <Trash2 size={20} color={Colors.white} />
                 </TouchableOpacity>
               </View>
@@ -163,10 +173,18 @@ export default function NotificationsScreen() {
         }}
       />
       {notifications.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View className="flex-1 justify-center items-center p-8">
           <Bell size={64} color={Colors.border} />
-          <Text style={styles.emptyTitle}>No Notifications</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text
+            className="text-[20px] mt-4 mb-2"
+            style={{ fontFamily: Fonts.semiBold, color: Colors.text }}
+          >
+            No Notifications
+          </Text>
+          <Text
+            className="text-[14px] text-center leading-5"
+            style={{ fontFamily: Fonts.regular, color: Colors.textSecondary }}
+          >
             You&apos;re all caught up! We&apos;ll notify you when something new happens.
           </Text>
         </View>
@@ -181,7 +199,7 @@ export default function NotificationsScreen() {
               onDelete={() => handleDeleteNotification(item.id)}
             />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerClassName="py-2"
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -189,6 +207,8 @@ export default function NotificationsScreen() {
   );
 }
 
+// ORIGINAL STYLES (COMMENTED OUT)
+/*
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -274,3 +294,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
+*/

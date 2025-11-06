@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { User, Star, Package, DollarSign, Settings, LogOut, ShoppingBag, Bell } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -33,50 +33,55 @@ export default function RiderProfileScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Rider Profile' }} />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+      <ScrollView className="flex-1 bg-[${Colors.background}]" showsVerticalScrollIndicator={false}>
+        
+        {/* Header Section */}
+        <View className={`bg-[${Colors.secondary}] items-center rounded-b-3xl px-6 py-8`}>
+          <View className="mb-4 relative">
+            <View className="w-20 h-20 rounded-full border-4 border-white bg-white/20 items-center justify-center">
               <User size={40} color={Colors.white} />
             </View>
-            <View style={styles.ratingBadge}>
+            <View className={`absolute bottom-0 right-0 bg-[${Colors.warning}] flex-row items-center px-2 py-1 rounded-xl`}>
               <Star size={14} color={Colors.white} fill={Colors.white} />
-              <Text style={styles.ratingText}>{riderStats.rating}</Text>
+              <Text className="text-white font-bold text-sm ml-1">{riderStats.rating}</Text>
             </View>
           </View>
-          <Text style={styles.name}>John Rider</Text>
-          <Text style={styles.subtitle}>Delivery Partner</Text>
+          <Text className="text-2xl font-bold text-white mb-1">John Rider</Text>
+          <Text className="text-white/90 text-base">Delivery Partner</Text>
         </View>
 
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
+        {/* Stats Section */}
+        <View className="flex-row p-4 space-x-3">
+          <View className="flex-1 bg-white rounded-xl p-4 items-center shadow">
             <Package size={24} color={Colors.secondary} />
-            <Text style={styles.statValue}>{riderStats.totalDeliveries}</Text>
-            <Text style={styles.statLabel}>Deliveries</Text>
+            <Text className="text-xl font-bold text-gray-800 mt-2">{riderStats.totalDeliveries}</Text>
+            <Text className="text-xs text-gray-500 mt-1">Deliveries</Text>
           </View>
-          <View style={styles.statCard}>
+          <View className="flex-1 bg-white rounded-xl p-4 items-center shadow">
             <DollarSign size={24} color={Colors.success} />
-            <Text style={styles.statValue}>₹{riderStats.totalEarnings}</Text>
-            <Text style={styles.statLabel}>Earnings</Text>
+            <Text className="text-xl font-bold text-gray-800 mt-2">₹{riderStats.totalEarnings}</Text>
+            <Text className="text-xs text-gray-500 mt-1">Earnings</Text>
           </View>
-          <View style={styles.statCard}>
+          <View className="flex-1 bg-white rounded-xl p-4 items-center shadow">
             <Star size={24} color={Colors.warning} />
-            <Text style={styles.statValue}>{riderStats.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
+            <Text className="text-xl font-bold text-gray-800 mt-2">{riderStats.rating}</Text>
+            <Text className="text-xs text-gray-500 mt-1">Rating</Text>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          
-          <View style={styles.settingCard}>
-            <View style={styles.settingLeft}>
-              <View style={styles.iconContainer}>
+        {/* Settings Section */}
+        <View className="p-4">
+          <Text className="text-lg font-bold text-gray-800 mb-3">Settings</Text>
+
+          {/* Customer Mode Switch */}
+          <View className="bg-white rounded-xl p-4 mb-3 flex-row items-center justify-between shadow">
+            <View className="flex-row items-center flex-1">
+              <View className={`w-10 h-10 rounded-full bg-[${Colors.primary}] bg-opacity-10 items-center justify-center mr-3`}>
                 <ShoppingBag size={20} color={Colors.primary} />
               </View>
               <View>
-                <Text style={styles.settingLabel}>Customer Mode</Text>
-                <Text style={styles.settingSubtext}>Switch to shopping experience</Text>
+                <Text className="text-base font-semibold text-gray-800">Customer Mode</Text>
+                <Text className="text-sm text-gray-500 mt-0.5">Switch to shopping experience</Text>
               </View>
             </View>
             <Switch
@@ -87,8 +92,9 @@ export default function RiderProfileScreen() {
             />
           </View>
 
+          {/* Test Notification */}
           <TouchableOpacity
-            style={styles.menuItem}
+            className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow"
             onPress={() => {
               scheduleLocalNotification(
                 'New Delivery Available',
@@ -99,186 +105,29 @@ export default function RiderProfileScreen() {
               Alert.alert('Success', 'Test delivery notification sent!');
             }}
           >
-            <View style={styles.menuIcon}>
+            <View className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}>
               <Bell size={20} color={Colors.secondary} />
             </View>
-            <Text style={styles.menuText}>Test Notification</Text>
+            <Text className="text-base font-medium text-gray-800">Test Notification</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIcon}>
+          {/* Account Settings */}
+          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow">
+            <View className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}>
               <Settings size={20} color={Colors.text} />
             </View>
-            <Text style={styles.menuText}>Account Settings</Text>
+            <Text className="text-base font-medium text-gray-800">Account Settings</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIcon}>
+          {/* Logout */}
+          <TouchableOpacity className="bg-white rounded-xl p-4 flex-row items-center shadow">
+            <View className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}>
               <LogOut size={20} color={Colors.error} />
             </View>
-            <Text style={[styles.menuText, { color: Colors.error }]}>Logout</Text>
+            <Text className={`text-base font-medium text-[${Colors.error}]`}>Logout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.secondary,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  avatarContainer: {
-    marginBottom: 16,
-    position: 'relative',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: Colors.white,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: Colors.warning,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: 'bold' as const,
-    color: Colors.white,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold' as const,
-    color: Colors.white,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.white,
-    opacity: 0.9,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold' as const,
-    color: Colors.text,
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  section: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  settingCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  settingLabel: {
-    fontSize: 16,
-    color: Colors.text,
-    fontWeight: '600' as const,
-  },
-  settingSubtext: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  menuItem: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  menuText: {
-    fontSize: 16,
-    color: Colors.text,
-    fontWeight: '500' as const,
-  },
-});

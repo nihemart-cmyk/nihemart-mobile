@@ -11,6 +11,7 @@ import InAppNotificationBanner from "@/components/InAppNotificationBanner";
 import { useFonts } from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import '@/locales/i18n';
+import "../globals.css"
 
 ExpoSplashScreen.preventAutoHideAsync();
 

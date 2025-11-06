@@ -103,13 +103,11 @@ export default function InAppNotificationBanner() {
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        {
-          top: insets.top + 8,
-          transform: [{ translateY }],
-        },
-      ]}
+      className="absolute left-4 right-4 z-[9999]"
+      style={{
+        top: insets.top + 8,
+        transform: [{ translateY }],
+      }}
     >
       <TouchableOpacity
         style={styles.banner}

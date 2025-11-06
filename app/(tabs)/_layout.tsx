@@ -6,6 +6,7 @@ import Fonts from "@/constants/fonts";
 import { useApp } from "@/contexts/AppContext";
 import NotificationBell from "@/components/NotificationBell";
 import { useTranslation } from 'react-i18next';
+import "../../globals.css"
 
 export default function TabLayout() {
   const { mode, isLoading } = useApp();

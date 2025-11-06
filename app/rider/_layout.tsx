@@ -4,6 +4,7 @@ import React from "react";
 import Colors from "@/constants/colors";
 import { useApp } from "@/contexts/AppContext";
 import NotificationBell from "@/components/NotificationBell";
+import "../../globals.css"
 
 export default function RiderTabLayout() {
   const { mode, isLoading } = useApp();

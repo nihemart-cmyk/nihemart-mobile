@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { MapPin, DollarSign, Navigation, Phone } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { DollarSign, Navigation, Phone } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
@@ -58,10 +58,9 @@ export default function RiderAvailableScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Accept',
-          onPress: () => {
-            Alert.alert('Success', 'Delivery accepted! Check Active tab for details.');
-          }
-        }
+          onPress: () =>
+            Alert.alert('Success', 'Delivery accepted! Check Active tab for details.'),
+        },
       ]
     );
   };
@@ -69,70 +68,77 @@ export default function RiderAvailableScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Available Deliveries' }} />
-      <View style={styles.container}>
-        <View style={styles.statsBar}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{orders.length}</Text>
-            <Text style={styles.statLabel}>Available</Text>
+      <View>
+        {/* Summary Bar */}
+        <View>
+          <View>
+            <Text>{orders.length}</Text>
+            <Text>Available</Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹350</Text>
-            <Text style={styles.statLabel}>Potential Earnings</Text>
+
+          <View />
+
+          <View>
+            <Text>₹350</Text>
+            <Text>Potential Earnings</Text>
           </View>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Orders List */}
+        <ScrollView showsVerticalScrollIndicator={false}>
           {orders.map((order) => (
-            <View key={order.id} style={styles.orderCard}>
-              <View style={styles.orderHeader}>
-                <View style={styles.earningsBadge}>
+            <View key={order.id}>
+              {/* Header: Earnings & Distance */}
+              <View>
+                <View>
                   <DollarSign size={16} color={Colors.white} />
-                  <Text style={styles.earningsText}>₹{order.deliveryFee}</Text>
+                  <Text>₹{order.deliveryFee}</Text>
                 </View>
-                <View style={styles.distanceBadge}>
+
+                <View>
                   <Navigation size={14} color={Colors.secondary} />
-                  <Text style={styles.distanceText}>{order.distance}</Text>
+                  <Text>{order.distance}</Text>
                 </View>
               </View>
 
-              <View style={styles.customerInfo}>
-                <Text style={styles.customerName}>{order.customerName}</Text>
-                <TouchableOpacity style={styles.phoneButton}>
+              {/* Customer Info */}
+              <View>
+                <Text>{order.customerName}</Text>
+                <TouchableOpacity>
                   <Phone size={18} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.locationSection}>
-                <View style={styles.locationItem}>
-                  <View style={[styles.locationDot, { backgroundColor: Colors.primary }]} />
-                  <View style={styles.locationDetails}>
-                    <Text style={styles.locationLabel}>Pickup</Text>
-                    <Text style={styles.locationAddress}>{order.pickupAddress}</Text>
+              {/* Location Section */}
+              <View>
+                <View>
+                  <View />
+                  <View>
+                    <Text>Pickup</Text>
+                    <Text>{order.pickupAddress}</Text>
                   </View>
                 </View>
 
-                <View style={styles.locationLine} />
+                <View />
 
-                <View style={styles.locationItem}>
-                  <View style={[styles.locationDot, { backgroundColor: Colors.secondary }]} />
-                  <View style={styles.locationDetails}>
-                    <Text style={styles.locationLabel}>Delivery</Text>
-                    <Text style={styles.locationAddress}>{order.deliveryAddress}</Text>
+                <View>
+                  <View />
+                  <View>
+                    <Text>Delivery</Text>
+                    <Text>{order.deliveryAddress}</Text>
                   </View>
                 </View>
               </View>
 
-              <View style={styles.orderFooter}>
+              {/* Footer: Total & Action */}
+              <View>
                 <View>
-                  <Text style={styles.orderTotalLabel}>Order Value</Text>
-                  <Text style={styles.orderTotal}>₹{order.total}</Text>
+                  <Text>Order Value</Text>
+                  <Text>₹{order.total}</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.acceptButton}
-                  onPress={() => handleAcceptOrder(order)}
-                >
-                  <Text style={styles.acceptButtonText}>Accept</Text>
+
+                <TouchableOpacity onPress={() => handleAcceptOrder(order)}>
+                  <Text>Accept</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -143,24 +149,26 @@ export default function RiderAvailableScreen() {
   );
 }
 
+/*
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
+
   statsBar: {
-    backgroundColor: Colors.white,
     flexDirection: 'row',
-    paddingVertical: 16,
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    paddingVertical: 16,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold' as const,
     color: Colors.secondary,
     marginBottom: 4,
@@ -173,13 +181,15 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: Colors.border,
   },
+
   content: {
     flex: 1,
     padding: 16,
   },
+
   orderCard: {
     backgroundColor: Colors.white,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 16,
     elevation: 2,
@@ -188,18 +198,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
+
   earningsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.secondary,
+    borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
     gap: 4,
   },
   earningsText: {
@@ -207,13 +219,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as const,
     color: Colors.white,
   },
+
   distanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.secondary + '15',
+    borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
     gap: 4,
   },
   distanceText: {
@@ -221,6 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.secondary,
   },
+
   customerInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -240,6 +254,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   locationSection: {
     marginBottom: 16,
   },
@@ -248,39 +263,40 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   locationDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 5,
     marginRight: 12,
   },
   locationLine: {
     width: 2,
     height: 20,
     backgroundColor: Colors.border,
-    marginLeft: 5,
+    marginLeft: 4.5,
     marginVertical: 4,
   },
   locationDetails: {
     flex: 1,
   },
   locationLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   locationAddress: {
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.text,
     fontWeight: '500' as const,
   },
+
   orderFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+    paddingTop: 16,
   },
   orderTotalLabel: {
     fontSize: 14,
@@ -294,13 +310,14 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     backgroundColor: Colors.secondary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   acceptButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold' as const,
     color: Colors.white,
   },
 });
+*/
