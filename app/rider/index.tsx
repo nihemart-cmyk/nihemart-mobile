@@ -1,323 +1,296 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { DollarSign, Navigation, Phone } from 'lucide-react-native';
-import Colors from '@/constants/colors';
-import { Stack } from 'expo-router';
-import { useState } from 'react';
-import { DeliveryOrder } from '@/types';
+import Colors from "@/constants/colors";
+import { useAuthStore } from "@/store/auth.store";
+import { Image } from "expo-image";
+import { Stack, useRouter } from "expo-router";
+import React, { useState, useEffect } from "react";
+import {
+   ScrollView,
+   Text,
+   View,
+   TouchableOpacity,
+   Alert,
+   RefreshControl,
+} from "react-native";
+import {
+   Package,
+   Clock,
+   MapPin,
+   Star,
+   TrendingUp,
+   Users,
+   Target,
+   Timer,
+   DollarSign,
+   ChevronRight,
+} from "lucide-react-native";
+import { useRiderByUserId } from "@/hooks/useRiders";
+import { useRiderByUserId } from "@/hooks/useRiders";
 
-const mockOrders: DeliveryOrder[] = [
-  {
-    id: '1',
-    date: new Date().toISOString(),
-    status: 'pending',
-    items: [],
-    total: 1250,
-    deliveryAddress: '456 Oak Avenue, Downtown Area',
-    pickupAddress: 'Nihemart Store, Main Street',
-    customerName: 'Sarah Johnson',
-    customerPhone: '+91 98765 43210',
-    deliveryFee: 50,
-    distance: '3.2 km',
-  },
-  {
-    id: '2',
-    date: new Date().toISOString(),
-    status: 'pending',
-    items: [],
-    total: 2480,
-    deliveryAddress: '789 Pine Road, Green Valley',
-    pickupAddress: 'Nihemart Store, Main Street',
-    customerName: 'Michael Chen',
-    customerPhone: '+91 98765 43211',
-    deliveryFee: 75,
-    distance: '5.8 km',
-  },
-  {
-    id: '3',
-    date: new Date().toISOString(),
-    status: 'pending',
-    items: [],
-    total: 890,
-    deliveryAddress: '321 Elm Street, City Center',
-    pickupAddress: 'Nihemart Store, Main Street',
-    customerName: 'Emily Davis',
-    customerPhone: '+91 98765 43212',
-    deliveryFee: 40,
-    distance: '2.1 km',
-  },
-];
+// Mock data - replace with actual API calls
+const mockStats = {
+   totalOrders: 156,
+   completed: 142,
+   pending: 8,
+   earnings: 1250000,
+   rating: 4.8,
+};
 
-export default function RiderAvailableScreen() {
-  const [orders] = useState<DeliveryOrder[]>(mockOrders);
+const mockRecentDeliveries = [
+   {
+      id: "1",
+      orderNumber: "#ORD-001",
+      export default function RiderDashboard() {
+         const router = useRouter();
+         const [refreshing, setRefreshing] = useState(false);
+         const user = useAuthStore((state) => state.user);
+         const { data: rider } = useRiderByUserId(user?.id as any);
 
-  const handleAcceptOrder = (order: DeliveryOrder) => {
-    Alert.alert(
-      'Accept Delivery?',
-      `Customer: ${order.customerName}\nDelivery Fee: ₹${order.deliveryFee}\nDistance: ${order.distance}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          onPress: () =>
-            Alert.alert('Success', 'Delivery accepted! Check Active tab for details.'),
-        },
-      ]
-    );
-  };
+         const onRefresh = async () => {
+            setRefreshing(true);
+            // Simulate API call
+            setTimeout(() => setRefreshing(false), 1000);
+         };
 
-  return (
-    <>
-      <Stack.Screen options={{ title: 'Available Deliveries' }} />
-      <View>
-        {/* Summary Bar */}
-        <View>
-          <View>
-            <Text>{orders.length}</Text>
-            <Text>Available</Text>
-          </View>
+         return (
+            <>
+               <Stack.Screen
+                  options={{
+                     headerShown: true,
+                     title: "Dashboard",
+                     headerStyle: {
+                        backgroundColor: Colors.primary,
+                     },
+                     headerTintColor: "#fff",
+                  }}
+               />
 
-          <View />
+               <ScrollView
+                  className="flex-1 bg-gray-50"
+                  refreshControl={
+                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+                  }
+               >
+                  <View className="p-4">
+                     {/* Welcome Section */}
+                     <View className="mb-6">
+                        <Text className="text-2xl font-bold text-gray-900 mb-1">
+                           Welcome back, {rider?.full_name ?? user?.email?.split("@")[0]}!
+                        </Text>
+                        <Text className="text-gray-600">Here's your delivery overview</Text>
+                     </View>
 
-          <View>
-            <Text>₹350</Text>
-            <Text>Potential Earnings</Text>
-          </View>
-        </View>
+                     {/* Stats Grid */}
+                     <View className="mb-6">
+                        <Text className="text-lg font-semibold text-gray-900 mb-3">Today's Overview</Text>
+                        <View className="flex-row flex-wrap -mx-1">
+                           <View className="w-1/2 px-1 mb-2">
+                              <StatsCard title="Total Orders" value={mockStats.totalOrders.toString()} change="12" icon={Package} gradient="bg-gradient-to-br from-blue-500 to-blue-600" />
+                           </View>
+                           <View className="w-1/2 px-1 mb-2">
+                              <StatsCard title="Completed" value={mockStats.completed.toString()} change="8" icon={Target} gradient="bg-gradient-to-br from-green-500 to-green-600" />
+                           </View>
+                           <View className="w-1/2 px-1">
+                              <StatsCard title="Pending" value={mockStats.pending.toString()} change="-3" icon={Timer} gradient="bg-gradient-to-br from-purple-500 to-purple-600" />
+                           </View>
+                           <View className="w-1/2 px-1">
+                              <StatsCard title="Earnings" value={`RWF ${(mockStats.earnings / 1000).toFixed(0)}K`} change="15" icon={DollarSign} gradient="bg-gradient-to-br from-orange-500 to-orange-600" />
+                           </View>
+                        </View>
+                     </View>
 
-        {/* Orders List */}
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {orders.map((order) => (
-            <View key={order.id}>
-              {/* Header: Earnings & Distance */}
-              <View>
-                <View>
-                  <DollarSign size={16} color={Colors.white} />
-                  <Text>₹{order.deliveryFee}</Text>
-                </View>
+                     {/* Profile Quick Stats */}
+                     <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
+                        <View className="flex-row items-center justify-between mb-4">
+                           <Text className="text-lg font-semibold text-gray-900">Your Profile</Text>
+                           <TouchableOpacity onPress={() => router.push("/rider/settings")}>
+                              <ChevronRight size={20} color={Colors.textSecondary} />
+                           </TouchableOpacity>
+                        </View>
 
-                <View>
-                  <Navigation size={14} color={Colors.secondary} />
-                  <Text>{order.distance}</Text>
-                </View>
-              </View>
+                        <View className="flex-row items-center mb-4">
+                           <View className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl items-center justify-center mr-4">
+                              <Text className="text-white font-bold text-lg">{user?.email?.charAt(0).toUpperCase()}</Text>
+                           </View>
 
-              {/* Customer Info */}
-              <View>
-                <Text>{order.customerName}</Text>
-                <TouchableOpacity>
-                  <Phone size={18} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
+                           <View className="flex-1">
+                              <Text className="font-bold text-gray-900 text-lg">{rider?.full_name ?? user?.email?.split("@")[0]}</Text>
+                              <Text className="text-gray-600 text-sm">Professional Rider</Text>
+                              <View className="flex-row items-center mt-1">
+                                 <Star size={14} color="#f59e0b" fill="#f59e0b" />
+                                 <Text className="text-gray-700 text-sm ml-1">{mockStats.rating}</Text>
+                              </View>
+                           </View>
+                        </View>
 
-              {/* Location Section */}
-              <View>
-                <View>
-                  <View />
-                  <View>
-                    <Text>Pickup</Text>
-                    <Text>{order.pickupAddress}</Text>
+                        <View className="flex-row justify-around">
+                           <View className="items-center">
+                              <Text className="text-2xl font-bold text-gray-900">{mockStats.totalOrders}</Text>
+                              <Text className="text-gray-500 text-xs">Deliveries</Text>
+                           </View>
+                           <View className="items-center">
+                              <Text className="text-2xl font-bold text-gray-900">98%</Text>
+                              <Text className="text-gray-500 text-xs">Success Rate</Text>
+                           </View>
+                           <View className="items-center">
+                              <Text className="text-2xl font-bold text-gray-900">12</Text>
+                              <Text className="text-gray-500 text-xs">Active Days</Text>
+                           </View>
+                        </View>
+                     </View>
+
+                     {/* Recent Deliveries */}
+                     <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                        <View className="flex-row items-center justify-between mb-4">
+                           <Text className="text-lg font-semibold text-gray-900">Recent Deliveries</Text>
+                           <TouchableOpacity onPress={() => router.push("/rider/orders")} className="flex-row items-center">
+                              <Text className="text-primary text-sm font-medium mr-1">View All</Text>
+                              <ChevronRight size={16} color={Colors.primary} />
+                           </TouchableOpacity>
+                        </View>
+
+                        {mockRecentDeliveries.map((delivery) => (
+                           <DeliveryCard key={delivery.id} orderNumber={delivery.orderNumber} location={delivery.location} amount={delivery.amount} time={delivery.time} status={delivery.status} />
+                        ))}
+                     </View>
                   </View>
-                </View>
-
-                <View />
-
-                <View>
-                  <View />
-                  <View>
-                    <Text>Delivery</Text>
-                    <Text>{order.deliveryAddress}</Text>
+               </ScrollView>
+            </>
+         );
+      }
+                           value={mockStats.totalOrders.toString()}
+                           change="12"
+                           icon={Package}
+                           gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+                        />
+                     </View>
+                     <View className="w-1/2 px-1 mb-2">
+                        <StatsCard
+                           title="Completed"
+                     <Text className="text-2xl font-bold text-gray-900 mb-1">
+                        Welcome back, {rider?.full_name ?? user?.email?.split('@')[0]}!
+                     </Text>
+                           gradient="bg-gradient-to-br from-green-500 to-green-600"
+                        />
+                     </View>
+                     <View className="w-1/2 px-1">
+                        <StatsCard
+                           title="Pending"
+                           value={mockStats.pending.toString()}
+                           change="-3"
+                           icon={Timer}
+                           gradient="bg-gradient-to-br from-purple-500 to-purple-600"
+                        />
+                     </View>
+                     <View className="w-1/2 px-1">
+                        <StatsCard
+                           title="Earnings"
+                           value={`RWF ${(mockStats.earnings / 1000).toFixed(0)}K`}
+                           change="15"
+                           icon={DollarSign}
+                           gradient="bg-gradient-to-br from-orange-500 to-orange-600"
+                        />
+                     </View>
                   </View>
-                </View>
-              </View>
+               </View>
 
-              {/* Footer: Total & Action */}
-              <View>
-                <View>
-                  <Text>Order Value</Text>
-                  <Text>₹{order.total}</Text>
-                </View>
+               {/* Profile Quick Stats */}
+               <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
+                  <View className="flex-row items-center justify-between mb-4">
+                     <Text className="text-lg font-semibold text-gray-900">
+                        Your Profile
+                     </Text>
+                     <TouchableOpacity
+                        onPress={() => router.push("/rider/settings")}
+                     >
+                        <ChevronRight
+                           size={20}
+                           color={Colors.textSecondary}
+                        />
+                     </TouchableOpacity>
+                  </View>
+                  
+                  <View className="flex-row items-center mb-4">
+                     <View className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl items-center justify-center mr-4">
+                        <Text className="text-white font-bold text-lg">
+                            {user?.email?.charAt(0).toUpperCase()}
+                        </Text>
+                     </View>
+                     
+                     <View className="flex-1">
+                        <Text className="font-bold text-gray-900 text-lg">
+                           {rider?.full_name ?? user?.email?.split('@')[0]}
+                        </Text>
+                        <Text className="text-gray-600 text-sm">
+                           Professional Rider
+                        </Text>
+                        <View className="flex-row items-center mt-1">
+                           <Star
+                              size={14}
+                              color="#f59e0b"
+                              fill="#f59e0b"
+                           />
+                           <Text className="text-gray-700 text-sm ml-1">
+                              {mockStats.rating}
+                           </Text>
+                        </View>
+                     </View>
+                  </View>
+                  
+                  <View className="flex-row justify-around">
+                     <View className="items-center">
+                        <Text className="text-2xl font-bold text-gray-900">
+                           {mockStats.totalOrders}
+                           <Text className="font-bold text-gray-900 text-lg">
+                              {rider?.full_name ?? user?.email?.split('@')[0]}
+                           </Text>
+                     <View className="items-center">
+                        <Text className="text-2xl font-bold text-gray-900">
+                           98%
+                        </Text>
+                        <Text className="text-gray-500 text-xs">Success Rate</Text>
+                     </View>
+                     <View className="items-center">
+                        <Text className="text-2xl font-bold text-gray-900">
+                           12
+                        </Text>
+                        <Text className="text-gray-500 text-xs">Active Days</Text>
+                     </View>
+                  </View>
+               </View>
 
-                <TouchableOpacity onPress={() => handleAcceptOrder(order)}>
-                  <Text>Accept</Text>
-                </TouchableOpacity>
-              </View>
+               {/* Recent Deliveries */}
+               <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <View className="flex-row items-center justify-between mb-4">
+                     <Text className="text-lg font-semibold text-gray-900">
+                        Recent Deliveries
+                     </Text>
+                     <TouchableOpacity
+                        onPress={() => router.push("/rider/orders")}
+                        className="flex-row items-center"
+                     >
+                        <Text className="text-primary text-sm font-medium mr-1">
+                           View All
+                        </Text>
+                        <ChevronRight
+                           size={16}
+                           color={Colors.primary}
+                        />
+                     </TouchableOpacity>
+                  </View>
+                  
+                  {mockRecentDeliveries.map((delivery) => (
+                     <DeliveryCard
+                        key={delivery.id}
+                        orderNumber={delivery.orderNumber}
+                        location={delivery.location}
+                        amount={delivery.amount}
+                        time={delivery.time}
+                        status={delivery.status}
+                     />
+                  ))}
+               </View>
             </View>
-          ))}
-        </ScrollView>
-      </View>
-    </>
-  );
+         </ScrollView>
+      </>
+   );
 }
-
-/*
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-
-  statsBar: {
-    flexDirection: 'row',
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingVertical: 16,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 'bold' as const,
-    color: Colors.secondary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  divider: {
-    width: 1,
-    backgroundColor: Colors.border,
-  },
-
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-
-  orderCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-
-  earningsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.secondary,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 4,
-  },
-  earningsText: {
-    fontSize: 16,
-    fontWeight: 'bold' as const,
-    color: Colors.white,
-  },
-
-  distanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.secondary + '15',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 4,
-  },
-  distanceText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.secondary,
-  },
-
-  customerInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  customerName: {
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-    color: Colors.text,
-  },
-  phoneButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  locationSection: {
-    marginBottom: 16,
-  },
-  locationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  locationDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 5,
-    marginRight: 12,
-  },
-  locationLine: {
-    width: 2,
-    height: 20,
-    backgroundColor: Colors.border,
-    marginLeft: 4.5,
-    marginVertical: 4,
-  },
-  locationDetails: {
-    flex: 1,
-  },
-  locationLabel: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  locationAddress: {
-    fontSize: 15,
-    color: Colors.text,
-    fontWeight: '500' as const,
-  },
-
-  orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: 16,
-  },
-  orderTotalLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 4,
-  },
-  orderTotal: {
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-    color: Colors.text,
-  },
-  acceptButton: {
-    backgroundColor: Colors.secondary,
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  acceptButtonText: {
-    fontSize: 15,
-    fontWeight: 'bold' as const,
-    color: Colors.white,
-  },
-});
-*/

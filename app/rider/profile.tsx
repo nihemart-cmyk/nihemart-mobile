@@ -2,6 +2,8 @@ import Colors from "@/constants/colors";
 import { useApp } from "@/contexts/AppContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import useRequireAuth from "@/hooks/useRequireAuth";
+import { useRiderByUserId } from "@/hooks/useRiders";
+import { useAuthStore } from "@/store/auth.store";
 import { Stack } from "expo-router";
 import {
    Bell,
@@ -27,6 +29,9 @@ export default function RiderProfileScreen() {
    const { mode, switchMode } = useApp();
    const { scheduleLocalNotification } = useNotifications();
    const { loading: authLoading } = useRequireAuth();
+   const { user, signOut } = useAuthStore();
+
+   const { data: rider, isLoading: riderLoading } = useRiderByUserId(user?.id);
 
    if (authLoading) return null;
 
@@ -83,7 +88,7 @@ export default function RiderProfileScreen() {
                   </View>
                </View>
                <Text className="text-2xl font-bold text-white mb-1">
-                  John Rider
+                  {rider?.full_name ?? user?.email?.split("@")[0] ?? "Rider"}
                </Text>
                <Text className="text-white/90 text-base">Delivery Partner</Text>
             </View>
@@ -201,7 +206,10 @@ export default function RiderProfileScreen() {
                </TouchableOpacity>
 
                {/* Logout */}
-               <TouchableOpacity className="bg-white rounded-xl p-4 flex-row items-center shadow">
+               <TouchableOpacity
+                  onPress={() => signOut()}
+                  className="bg-white rounded-xl p-4 flex-row items-center shadow"
+               >
                   <View
                      className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}
                   >
