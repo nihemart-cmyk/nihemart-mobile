@@ -1,142 +1,212 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Image } from 'expo-image';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react-native';
-import { useApp } from '@/contexts/AppContext';
-import Colors from '@/constants/colors';
-import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import Colors from "@/constants/colors";
+import { useApp } from "@/contexts/AppContext";
+import { useAuthStore } from "@/store/auth.store";
+import { Image } from "expo-image";
+import { Stack, useRouter } from "expo-router";
+import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react-native";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React from "react";
 
 export default function CartScreen() {
-  const { cart, updateCartQuantity, removeFromCart, cartTotal, placeOrder } = useApp();
-  const router = useRouter();
-  const { t } = useTranslation();
-  const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
+   const { cart, updateCartQuantity, removeFromCart, cartTotal, placeOrder } =
+      useApp();
+   const router = useRouter();
+   const { t } = useTranslation();
+   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
 
-  const handleCheckout = async () => {
-    if (cart.length === 0) {
-      Alert.alert(t('cart.empty'), t('cart.emptyMessage'));
-      return;
-    }
+   const handleCheckout = async () => {
+      const user = useAuthStore.getState().user;
 
-    Alert.alert(
-      t('checkout.title'),
-      `${t('cart.total')}: ₹${cartTotal}\n\n${t('checkout.deliveryAddress')}`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            setIsPlacingOrder(true);
-            try {
-              await placeOrder('Default Address: 123 Main St, City, State 123456');
-              Alert.alert(t('checkout.orderPlaced'), t('checkout.orderSuccess'), [
-                { text: 'OK', onPress: () => router.push('/orders' as any) }
-              ]);
-            } catch {
-              Alert.alert(t('common.error'), 'Failed to place order. Please try again.');
-            } finally {
-              setIsPlacingOrder(false);
-            }
-          }
-        }
-      ]
-    );
-  };
+      if (!user) {
+         // Not authenticated: send to sign in first
+         router.push("/signin" as any);
+         return;
+      }
 
-  const handleRemove = (productId: string, productName: string) => {
-    Alert.alert(
-      t('cart.remove'),
-      `${t('cart.remove')} ${productName}?`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('cart.remove'), style: 'destructive', onPress: () => removeFromCart(productId) }
-      ]
-    );
-  };
+      if (cart.length === 0) {
+         Alert.alert(t("cart.empty"), t("cart.emptyMessage"));
+         return;
+      }
 
-  if (cart.length === 0) {
-    return (
-      <>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View className="flex-1 bg-background items-center justify-center p-6">
-          <ShoppingBag size={64} color={Colors.textSecondary} />
-          <Text className="text-text text-3xl font-bold mt-4">{t('cart.empty')}</Text>
-          <Text className="text-textSecondary text-lg mt-2 mb-6">{t('cart.emptyMessage')}</Text>
-          <TouchableOpacity 
-            className="bg-primary px-8 py-3 rounded-xl"
-            onPress={() => router.push('/(tabs)' as any)}
-          >
-            <Text className="text-white text-lg font-semibold">{t('home.viewAll')}</Text>
-          </TouchableOpacity>
-        </View>
-      </>
-    );
-  }
+      Alert.alert(
+         t("checkout.title"),
+         `${t("cart.total")}: ₹${cartTotal}\n\n${t("checkout.deliveryAddress")}`,
+         [
+            { text: t("common.cancel"), style: "cancel" },
+            {
+               text: t("common.confirm"),
+               onPress: async () => {
+                  setIsPlacingOrder(true);
+                  try {
+                     await placeOrder(
+                        "Default Address: 123 Main St, City, State 123456"
+                     );
+                     Alert.alert(
+                        t("checkout.orderPlaced"),
+                        t("checkout.orderSuccess"),
+                        [
+                           {
+                              text: "OK",
+                              onPress: () => router.push("/orders" as any),
+                           },
+                        ]
+                     );
+                  } catch {
+                     Alert.alert(
+                        t("common.error"),
+                        "Failed to place order. Please try again."
+                     );
+                  } finally {
+                     setIsPlacingOrder(false);
+                  }
+               },
+            },
+         ]
+      );
+   };
 
-  return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-1 bg-background">
-        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
-          {cart.map((item) => (
-            <View key={item.product.id} className="flex-row bg-white rounded-xl p-3 mb-3 shadow-md">
-              <Image
-                source={{ uri: item.product.image }}
-                className="w-20 h-20 rounded-lg"
-                contentFit="cover"
-              />
-              <View className="flex-1 ml-3 justify-between">
-                <Text className="text-text text-base font-semibold" numberOfLines={2}>
-                  {item.product.name}
-                </Text>
-                <Text className="text-primary text-lg font-bold">
-                  ₹{item.product.discountPrice || item.product.price}
-                </Text>
-                <View className="flex-row items-center gap-3">
-                  <TouchableOpacity
-                    className="w-7 h-7 rounded-lg bg-background items-center justify-center border border-primary"
-                    onPress={() => updateCartQuantity(item.product.id, item.quantity - 1)}
-                  >
-                    <Minus size={16} color={Colors.primary} />
-                  </TouchableOpacity>
-                  <Text className="text-text text-lg font-semibold min-w-6 text-center">{item.quantity}</Text>
-                  <TouchableOpacity
-                    className="w-7 h-7 rounded-lg bg-background items-center justify-center border border-primary"
-                    onPress={() => updateCartQuantity(item.product.id, item.quantity + 1)}
-                  >
-                    <Plus size={16} color={Colors.primary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <TouchableOpacity
-                className="p-2 justify-center"
-                onPress={() => handleRemove(item.product.id, item.product.name)}
-              >
-                <Trash2 size={20} color={Colors.error} />
-              </TouchableOpacity>
+   const handleRemove = (productId: string, productName: string) => {
+      Alert.alert(t("cart.remove"), `${t("cart.remove")} ${productName}?`, [
+         { text: t("common.cancel"), style: "cancel" },
+         {
+            text: t("cart.remove"),
+            style: "destructive",
+            onPress: () => removeFromCart(productId),
+         },
+      ]);
+   };
+
+   if (cart.length === 0) {
+      return (
+         <>
+            <Stack.Screen options={{ headerShown: false }} />
+            <View className="flex-1 bg-background items-center justify-center p-6">
+               <ShoppingBag
+                  size={64}
+                  color={Colors.textSecondary}
+               />
+               <Text className="text-text text-3xl font-bold mt-4">
+                  {t("cart.empty")}
+               </Text>
+               <Text className="text-textSecondary text-lg mt-2 mb-6">
+                  {t("cart.emptyMessage")}
+               </Text>
+               <TouchableOpacity
+                  className="bg-primary px-8 py-3 rounded-xl"
+                  onPress={() => router.push("/(tabs)" as any)}
+               >
+                  <Text className="text-white text-lg font-semibold">
+                     {t("home.viewAll")}
+                  </Text>
+               </TouchableOpacity>
             </View>
-          ))}
-        </ScrollView>
+         </>
+      );
+   }
 
-        <View className="bg-white p-4 border-t border-border">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-text text-xl font-semibold">{t('cart.total')}:</Text>
-            <Text className="text-primary text-2xl font-bold">₹{cartTotal}</Text>
-          </View>
-          <TouchableOpacity 
-            className={`bg-primary py-4 rounded-xl items-center ${isPlacingOrder && 'opacity-60'}`}
-            onPress={handleCheckout}
-            disabled={isPlacingOrder}
-          >
-            <Text className="text-white text-lg font-bold">
-              {isPlacingOrder ? t('common.loading') : t('cart.proceedToCheckout')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </>
-  );
+   return (
+      <>
+         <Stack.Screen options={{ headerShown: false }} />
+         <View className="flex-1 bg-background">
+            <ScrollView
+               className="flex-1 p-4"
+               showsVerticalScrollIndicator={false}
+            >
+               {cart.map((item) => (
+                  <View
+                     key={item.product.id}
+                     className="flex-row bg-white rounded-xl p-3 mb-3 shadow-md"
+                  >
+                     <Image
+                        source={{ uri: item.product.image }}
+                        className="w-20 h-20 rounded-lg"
+                        contentFit="cover"
+                     />
+                     <View className="flex-1 ml-3 justify-between">
+                        <Text
+                           className="text-text text-base font-semibold"
+                           numberOfLines={2}
+                        >
+                           {item.product.name}
+                        </Text>
+                        <Text className="text-primary text-lg font-bold">
+                           ₹{item.product.discountPrice || item.product.price}
+                        </Text>
+                        <View className="flex-row items-center gap-3">
+                           <TouchableOpacity
+                              className="w-7 h-7 rounded-lg bg-background items-center justify-center border border-primary"
+                              onPress={() =>
+                                 updateCartQuantity(
+                                    item.product.id,
+                                    item.quantity - 1
+                                 )
+                              }
+                           >
+                              <Minus
+                                 size={16}
+                                 color={Colors.primary}
+                              />
+                           </TouchableOpacity>
+                           <Text className="text-text text-lg font-semibold min-w-6 text-center">
+                              {item.quantity}
+                           </Text>
+                           <TouchableOpacity
+                              className="w-7 h-7 rounded-lg bg-background items-center justify-center border border-primary"
+                              onPress={() =>
+                                 updateCartQuantity(
+                                    item.product.id,
+                                    item.quantity + 1
+                                 )
+                              }
+                           >
+                              <Plus
+                                 size={16}
+                                 color={Colors.primary}
+                              />
+                           </TouchableOpacity>
+                        </View>
+                     </View>
+                     <TouchableOpacity
+                        className="p-2 justify-center"
+                        onPress={() =>
+                           handleRemove(item.product.id, item.product.name)
+                        }
+                     >
+                        <Trash2
+                           size={20}
+                           color={Colors.error}
+                        />
+                     </TouchableOpacity>
+                  </View>
+               ))}
+            </ScrollView>
+
+            <View className="bg-white p-4 border-t border-border">
+               <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-text text-xl font-semibold">
+                     {t("cart.total")}:
+                  </Text>
+                  <Text className="text-primary text-2xl font-bold">
+                     ₹{cartTotal}
+                  </Text>
+               </View>
+               <TouchableOpacity
+                  className={`bg-primary py-4 rounded-xl items-center ${isPlacingOrder && "opacity-60"}`}
+                  onPress={handleCheckout}
+                  disabled={isPlacingOrder}
+               >
+                  <Text className="text-white text-lg font-bold">
+                     {isPlacingOrder
+                        ? t("common.loading")
+                        : t("cart.proceedToCheckout")}
+                  </Text>
+               </TouchableOpacity>
+            </View>
+         </View>
+      </>
+   );
 }
 
 // const styles = StyleSheet.create({

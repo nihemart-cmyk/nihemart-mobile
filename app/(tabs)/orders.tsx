@@ -1,112 +1,185 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Package, Clock, CheckCircle, XCircle, Truck } from 'lucide-react-native';
-import { useApp } from '@/contexts/AppContext';
-import Colors from '@/constants/colors';
-import { Stack } from 'expo-router';
-import { Order } from '@/types';
+import Colors from "@/constants/colors";
+import { useApp } from "@/contexts/AppContext";
+import useRequireAuth from "@/hooks/useRequireAuth";
+import { Order } from "@/types";
+import { Stack } from "expo-router";
+import {
+   CheckCircle,
+   Clock,
+   Package,
+   Truck,
+   XCircle,
+} from "lucide-react-native";
+import React from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function OrdersScreen() {
-  const { orders } = useApp();
+   const { orders } = useApp();
+   const { loading: authLoading } = useRequireAuth();
 
-  const getStatusIcon = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock size={20} color={Colors.warning} />;
-      case 'processing':
-        return <Package size={20} color={Colors.primary} />;
-      case 'shipped':
-        return <Truck size={20} color={Colors.primary} />;
-      case 'delivered':
-        return <CheckCircle size={20} color={Colors.success} />;
-      case 'cancelled':
-        return <XCircle size={20} color={Colors.error} />;
-    }
-  };
+   if (authLoading) return null;
 
-  const getStatusColor = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return Colors.warning;
-      case 'processing':
-      case 'shipped':
-        return Colors.primary;
-      case 'delivered':
-        return Colors.success;
-      case 'cancelled':
-        return Colors.error;
-    }
-  };
+   const getStatusIcon = (status: Order["status"]) => {
+      switch (status) {
+         case "pending":
+            return (
+               <Clock
+                  size={20}
+                  color={Colors.warning}
+               />
+            );
+         case "processing":
+            return (
+               <Package
+                  size={20}
+                  color={Colors.primary}
+               />
+            );
+         case "shipped":
+            return (
+               <Truck
+                  size={20}
+                  color={Colors.primary}
+               />
+            );
+         case "delivered":
+            return (
+               <CheckCircle
+                  size={20}
+                  color={Colors.success}
+               />
+            );
+         case "cancelled":
+            return (
+               <XCircle
+                  size={20}
+                  color={Colors.error}
+               />
+            );
+      }
+   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+   const getStatusColor = (status: Order["status"]) => {
+      switch (status) {
+         case "pending":
+            return Colors.warning;
+         case "processing":
+         case "shipped":
+            return Colors.primary;
+         case "delivered":
+            return Colors.success;
+         case "cancelled":
+            return Colors.error;
+      }
+   };
 
-  if (orders.length === 0) {
-    return (
-      <>
-        <Stack.Screen options={{ title: 'My Orders' }} />
-        <View className="flex-1 bg-background items-center justify-center p-6">
-          <Package size={64} color={Colors.textSecondary} />
-          <Text className="text-2xl font-bold text-text mt-4">No orders yet</Text>
-          <Text className="text-lg text-textSecondary mt-2">Your order history will appear here</Text>
-        </View>
-      </>
-    );
-  }
+   const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+         month: "short",
+         day: "numeric",
+         year: "numeric",
+      });
+   };
 
-  return (
-    <>
-      <Stack.Screen options={{ title: 'My Orders' }} />
-      <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
-        <View className="p-4">
-          {orders.map((order) => (
-            <View key={order.id} className="bg-white rounded-xl p-4 mb-4 shadow-lg">
-              <View className="flex-row justify-between items-start">
-                <View>
-                  <Text className="text-lg font-bold text-text">Order #{order.id.slice(-8)}</Text>
-                  <Text className="text-sm text-textSecondary mt-1">{formatDate(order.date)}</Text>
-                </View>
-                <View className={`flex-row items-center gap-2 px-3 py-2 rounded-xl ${getStatusColor(order.status)}20`}>
-                  {getStatusIcon(order.status)}
-                  <Text className={`text-sm font-semibold ${getStatusColor(order.status)}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </Text>
-                </View>
-              </View>
-
-              <View className="h-px bg-border my-3" />
-
-              <View className="mb-3">
-                {order.items.slice(0, 2).map((item) => (
-                  <View key={item.product.id} className="flex-row justify-between py-1">
-                    <Text className="text-sm text-text flex-1">{item.product.name}</Text>
-                    <Text className="text-sm text-textSecondary ml-2">x{item.quantity}</Text>
-                  </View>
-                ))}
-                {order.items.length > 2 && (
-                  <Text className="text-sm text-primary mt-1">+{order.items.length - 2} more items</Text>
-                )}
-              </View>
-
-              <View className="flex-row justify-between items-center pt-3 border-t border-border">
-                <Text className="text-sm text-textSecondary">Total Amount</Text>
-                <Text className="text-xl font-bold text-primary">₹{order.total}</Text>
-              </View>
-
-              <TouchableOpacity className="bg-primary py-3 rounded-lg items-center mt-3">
-                <Text className="text-sm font-semibold text-white">Track Order</Text>
-              </TouchableOpacity>
+   if (orders.length === 0) {
+      return (
+         <>
+            <Stack.Screen options={{ title: "My Orders" }} />
+            <View className="flex-1 bg-background items-center justify-center p-6">
+               <Package
+                  size={64}
+                  color={Colors.textSecondary}
+               />
+               <Text className="text-2xl font-bold text-text mt-4">
+                  No orders yet
+               </Text>
+               <Text className="text-lg text-textSecondary mt-2">
+                  Your order history will appear here
+               </Text>
             </View>
-          ))}
-        </View>
-      </ScrollView>
-    </>
-  );
+         </>
+      );
+   }
+
+   return (
+      <>
+         <Stack.Screen options={{ title: "My Orders" }} />
+         <ScrollView
+            className="flex-1 bg-background"
+            showsVerticalScrollIndicator={false}
+         >
+            <View className="p-4">
+               {orders.map((order) => (
+                  <View
+                     key={order.id}
+                     className="bg-white rounded-xl p-4 mb-4 shadow-lg"
+                  >
+                     <View className="flex-row justify-between items-start">
+                        <View>
+                           <Text className="text-lg font-bold text-text">
+                              Order #{order.id.slice(-8)}
+                           </Text>
+                           <Text className="text-sm text-textSecondary mt-1">
+                              {formatDate(order.date)}
+                           </Text>
+                        </View>
+                        <View
+                           className={`flex-row items-center gap-2 px-3 py-2 rounded-xl ${getStatusColor(order.status)}20`}
+                        >
+                           {getStatusIcon(order.status)}
+                           <Text
+                              className={`text-sm font-semibold ${getStatusColor(order.status)}`}
+                           >
+                              {order.status.charAt(0).toUpperCase() +
+                                 order.status.slice(1)}
+                           </Text>
+                        </View>
+                     </View>
+
+                     <View className="h-px bg-border my-3" />
+
+                     <View className="mb-3">
+                        {order.items.slice(0, 2).map((item) => (
+                           <View
+                              key={item.product.id}
+                              className="flex-row justify-between py-1"
+                           >
+                              <Text className="text-sm text-text flex-1">
+                                 {item.product.name}
+                              </Text>
+                              <Text className="text-sm text-textSecondary ml-2">
+                                 x{item.quantity}
+                              </Text>
+                           </View>
+                        ))}
+                        {order.items.length > 2 && (
+                           <Text className="text-sm text-primary mt-1">
+                              +{order.items.length - 2} more items
+                           </Text>
+                        )}
+                     </View>
+
+                     <View className="flex-row justify-between items-center pt-3 border-t border-border">
+                        <Text className="text-sm text-textSecondary">
+                           Total Amount
+                        </Text>
+                        <Text className="text-xl font-bold text-primary">
+                           ₹{order.total}
+                        </Text>
+                     </View>
+
+                     <TouchableOpacity className="bg-primary py-3 rounded-lg items-center mt-3">
+                        <Text className="text-sm font-semibold text-white">
+                           Track Order
+                        </Text>
+                     </TouchableOpacity>
+                  </View>
+               ))}
+            </View>
+         </ScrollView>
+      </>
+   );
 }
 
 // const styles = StyleSheet.create({

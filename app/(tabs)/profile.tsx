@@ -1,165 +1,270 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
-import { User, MapPin, Phone, Mail, Settings, LogOut, Bike, Bell, Languages } from 'lucide-react-native';
-import { useApp } from '@/contexts/AppContext';
-import { useNotifications } from '@/contexts/NotificationContext';
-import Colors from '@/constants/colors';
-import { Stack } from 'expo-router';
-import { useTranslation } from 'react-i18next';
+import Colors from "@/constants/colors";
+import { useApp } from "@/contexts/AppContext";
+import { useNotifications } from "@/contexts/NotificationContext";
+import useProfile from "@/hooks/useProfile";
+import useRequireAuth from "@/hooks/useRequireAuth";
+import { useAuthStore } from "@/store/auth.store";
+import { Stack } from "expo-router";
+import {
+   Bell,
+   Bike,
+   Languages,
+   LogOut,
+   Mail,
+   MapPin,
+   Phone,
+   Settings,
+   User,
+} from "lucide-react-native";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import {
+   Alert,
+   ScrollView,
+   Switch,
+   Text,
+   TouchableOpacity,
+   View,
+} from "react-native";
 
 export default function ProfileScreen() {
-  const { mode, switchMode, language, changeLanguage } = useApp();
-  const { scheduleLocalNotification } = useNotifications();
-  const { t } = useTranslation();
+   const { mode, switchMode, language, changeLanguage } = useApp();
+   const { scheduleLocalNotification } = useNotifications();
+   const { t } = useTranslation();
+   const { loading: authLoading, user } = useRequireAuth();
 
-  const handleModeSwitch = (value: boolean) => {
-    const newMode = value ? 'rider' : 'user';
-    Alert.alert(
-      `${t('profile.switchTo')} ${newMode === 'rider' ? t('profile.riderMode_short') : t('profile.userMode')} ${t('profile.mode')}?`,
-      `${t('profile.switchMessage')} ${newMode} ${t('profile.panel')}.`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: () => switchMode(newMode)
-        }
-      ]
-    );
-  };
+   const handleModeSwitch = (value: boolean) => {
+      const newMode = value ? "rider" : "user";
+      Alert.alert(
+         `${t("profile.switchTo")} ${newMode === "rider" ? t("profile.riderMode_short") : t("profile.userMode")} ${t("profile.mode")}?`,
+         `${t("profile.switchMessage")} ${newMode} ${t("profile.panel")}.`,
+         [
+            { text: t("common.cancel"), style: "cancel" },
+            {
+               text: t("common.confirm"),
+               onPress: () => switchMode(newMode),
+            },
+         ]
+      );
+   };
 
-  const handleLanguageSwitch = () => {
-    Alert.alert(
-      t('profile.language'),
-      t('profile.languageSubtext'),
-      [
-        {
-          text: 'English',
-          onPress: () => changeLanguage('en'),
-          style: language === 'en' ? 'default' : 'cancel'
-        },
-        {
-          text: 'Ikinyarwanda',
-          onPress: () => changeLanguage('rw'),
-          style: language === 'rw' ? 'default' : 'cancel'
-        },
-        { text: t('common.cancel'), style: 'cancel' }
-      ]
-    );
-  };
+   const handleLanguageSwitch = () => {
+      Alert.alert(t("profile.language"), t("profile.languageSubtext"), [
+         {
+            text: "English",
+            onPress: () => changeLanguage("en"),
+            style: language === "en" ? "default" : "cancel",
+         },
+         {
+            text: "Ikinyarwanda",
+            onPress: () => changeLanguage("rw"),
+            style: language === "rw" ? "default" : "cancel",
+         },
+         { text: t("common.cancel"), style: "cancel" },
+      ]);
+   };
 
-  return (
-    <>
-      <Stack.Screen options={{ title: t('profile.title') }} />
-      <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
-        <View className="bg-primary py-8 px-6 items-center rounded-b-3xl">
-          <View className="mb-4">
-            <View className="w-20 h-20 rounded-full bg-white bg-opacity-20 items-center justify-center border-4 border-white">
-              <User size={40} color={Colors.white} />
-            </View>
-          </View>
-          <Text className="text-2xl font-bold text-white mb-1">John Doe</Text>
-          <Text className="text-lg text-white opacity-90">john.doe@email.com</Text>
-        </View>
+   const { profile, isLoading: profileLoading } = useProfile();
+   const signOut = useAuthStore((s) => s.signOut);
 
-        <View className="p-4">
-          <Text className="text-xl font-bold text-text mb-3">{t('profile.accountInfo')}</Text>
+   // Prefer the profile row's full name, fall back to auth user metadata full_name, then email
+   const displayName =
+      profile?.full_name ??
+      user?.user_metadata?.full_name ??
+      user?.email ??
+      "John Doe";
 
-          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-            <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-              <Phone size={20} color={Colors.primary} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm text-textSecondary mb-1">{t('profile.phoneNumber')}</Text>
-              <Text className="text-base text-text font-medium">+91 98765 43210</Text>
-            </View>
-          </TouchableOpacity>
+   if (authLoading) return null;
 
-          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-            <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-              <Mail size={20} color={Colors.primary} />
+   return (
+      <>
+         <Stack.Screen options={{ title: t("profile.title") }} />
+         <ScrollView
+            className="flex-1 bg-background"
+            showsVerticalScrollIndicator={false}
+         >
+            <View className="bg-primary py-8 px-6 items-center rounded-b-3xl">
+               <View className="mb-4">
+                  <View className="w-20 h-20 rounded-full bg-white bg-opacity-20 items-center justify-center border-4 border-white">
+                     <User
+                        size={40}
+                        color={Colors.white}
+                     />
+                  </View>
+               </View>
+               <Text className="text-2xl font-bold text-white mb-1">
+                  {displayName}
+               </Text>
+               <Text className="text-lg text-white opacity-90">
+                  {user?.email ?? "john.doe@email.com"}
+               </Text>
             </View>
-            <View className="flex-1">
-              <Text className="text-sm text-textSecondary mb-1">{t('profile.emailAddress')}</Text>
-              <Text className="text-base text-text font-medium">john.doe@email.com</Text>
-            </View>
-          </TouchableOpacity>
 
-          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-            <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-              <MapPin size={20} color={Colors.primary} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm text-textSecondary mb-1">{t('profile.defaultAddress')}</Text>
-              <Text className="text-base text-text font-medium">123 Main St, City, State 123456</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+            <View className="p-4">
+               <Text className="text-xl font-bold text-text mb-3">
+                  {t("profile.accountInfo")}
+               </Text>
 
-        <View className="p-4">
-          <Text className="text-xl font-bold text-text mb-3">{t('profile.settings')}</Text>
+               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
+                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
+                     <Phone
+                        size={20}
+                        color={Colors.primary}
+                     />
+                  </View>
+                  <View className="flex-1">
+                     <Text className="text-sm text-textSecondary mb-1">
+                        {t("profile.phoneNumber")}
+                     </Text>
+                     <Text className="text-base text-text font-medium">
+                        {profile?.phone ?? "+91 98765 43210"}
+                     </Text>
+                  </View>
+               </TouchableOpacity>
 
-          <View className="bg-white rounded-xl p-4 mb-3 flex-row items-center justify-between shadow-sm">
-            <View className="flex-row items-center flex-1">
-              <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-15 items-center justify-center mr-3">
-                <Bike size={20} color={Colors.secondary} />
-              </View>
-              <View>
-                <Text className="text-base font-semibold text-text">{t('profile.riderMode')}</Text>
-                <Text className="text-sm text-textSecondary mt-1">{t('profile.riderModeSubtext')}</Text>
-              </View>
-            </View>
-            <Switch
-              value={mode === 'rider'}
-              onValueChange={handleModeSwitch}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor={Colors.white}
-            />
-          </View>
+               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
+                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
+                     <Mail
+                        size={20}
+                        color={Colors.primary}
+                     />
+                  </View>
+                  <View className="flex-1">
+                     <Text className="text-sm text-textSecondary mb-1">
+                        {t("profile.emailAddress")}
+                     </Text>
+                     <Text className="text-base text-text font-medium">
+                        {user?.email ?? "john.doe@email.com"}
+                     </Text>
+                  </View>
+               </TouchableOpacity>
 
-          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm" onPress={handleLanguageSwitch}>
-            <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-              <Languages size={20} color={Colors.primary} />
+               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
+                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
+                     <MapPin
+                        size={20}
+                        color={Colors.primary}
+                     />
+                  </View>
+                  <View className="flex-1">
+                     <Text className="text-sm text-textSecondary mb-1">
+                        {t("profile.defaultAddress")}
+                     </Text>
+                     <Text className="text-base text-text font-medium">
+                        123 Main St, City, State 123456
+                     </Text>
+                  </View>
+               </TouchableOpacity>
             </View>
-            <View className="flex-1">
-              <Text className="text-base text-text font-medium">{t('profile.language')}</Text>
-              <Text className="text-sm text-textSecondary mt-1">{language === 'en' ? 'English' : 'Ikinyarwanda'}</Text>
-            </View>
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
-            onPress={() => {
-              scheduleLocalNotification(
-                t('notifications.testTitle'),
-                t('notifications.testMessage'),
-                {},
-                'system'
-              );
-              Alert.alert(t('common.done'), t('notifications.testSuccess'));
-            }}
-          >
-            <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-              <Bell size={20} color={Colors.primary} />
-            </View>
-            <Text className="text-base text-text font-medium">{t('profile.testNotification')}</Text>
-          </TouchableOpacity>
+            <View className="p-4">
+               <Text className="text-xl font-bold text-text mb-3">
+                  {t("profile.settings")}
+               </Text>
 
-          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-            <View className="w-10 h-10 rounded-full bg-background items-center justify-center mr-3">
-              <Settings size={20} color={Colors.text} />
-            </View>
-            <Text className="text-base text-text font-medium">{t('profile.appSettings')}</Text>
-          </TouchableOpacity>
+               <View className="bg-white rounded-xl p-4 mb-3 flex-row items-center justify-between shadow-sm">
+                  <View className="flex-row items-center flex-1">
+                     <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-15 items-center justify-center mr-3">
+                        <Bike
+                           size={20}
+                           color={Colors.secondary}
+                        />
+                     </View>
+                     <View>
+                        <Text className="text-base font-semibold text-text">
+                           {t("profile.riderMode")}
+                        </Text>
+                        <Text className="text-sm text-textSecondary mt-1">
+                           {t("profile.riderModeSubtext")}
+                        </Text>
+                     </View>
+                  </View>
+                  <Switch
+                     value={mode === "rider"}
+                     onValueChange={handleModeSwitch}
+                     trackColor={{ false: Colors.border, true: Colors.primary }}
+                     thumbColor={Colors.white}
+                  />
+               </View>
 
-          <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-            <View className="w-10 h-10 rounded-full bg-error bg-opacity-15 items-center justify-center mr-3">
-              <LogOut size={20} color={Colors.error} />
+               <TouchableOpacity
+                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
+                  onPress={handleLanguageSwitch}
+               >
+                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
+                     <Languages
+                        size={20}
+                        color={Colors.primary}
+                     />
+                  </View>
+                  <View className="flex-1">
+                     <Text className="text-base text-text font-medium">
+                        {t("profile.language")}
+                     </Text>
+                     <Text className="text-sm text-textSecondary mt-1">
+                        {language === "en" ? "English" : "Ikinyarwanda"}
+                     </Text>
+                  </View>
+               </TouchableOpacity>
+
+               <TouchableOpacity
+                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
+                  onPress={() => {
+                     scheduleLocalNotification(
+                        t("notifications.testTitle"),
+                        t("notifications.testMessage"),
+                        {},
+                        "system"
+                     );
+                     Alert.alert(
+                        t("common.done"),
+                        t("notifications.testSuccess")
+                     );
+                  }}
+               >
+                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
+                     <Bell
+                        size={20}
+                        color={Colors.primary}
+                     />
+                  </View>
+                  <Text className="text-base text-text font-medium">
+                     {t("profile.testNotification")}
+                  </Text>
+               </TouchableOpacity>
+
+               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
+                  <View className="w-10 h-10 rounded-full bg-background items-center justify-center mr-3">
+                     <Settings
+                        size={20}
+                        color={Colors.text}
+                     />
+                  </View>
+                  <Text className="text-base text-text font-medium">
+                     {t("profile.appSettings")}
+                  </Text>
+               </TouchableOpacity>
+
+               <TouchableOpacity
+                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
+                  onPress={async () => {
+                     await signOut();
+                  }}
+               >
+                  <View className="w-10 h-10 rounded-full bg-error bg-opacity-15 items-center justify-center mr-3">
+                     <LogOut
+                        size={20}
+                        color={Colors.error}
+                     />
+                  </View>
+                  <Text className="text-base text-error font-medium">
+                     {t("profile.logout")}
+                  </Text>
+               </TouchableOpacity>
             </View>
-            <Text className="text-base text-error font-medium">{t('profile.logout')}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </>
-  );
+         </ScrollView>
+      </>
+   );
 }
 
 // const styles = StyleSheet.create({
