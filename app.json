@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.bertin01.nihemartmobile"
     },
     "web": {
       "output": "static",
@@ -38,7 +39,9 @@
           "icon": "./local/assets/notification_icon.png",
           "color": "#ffffff",
           "defaultChannel": "default",
-          "sounds": ["./local/assets/notification_sound.wav"],
+          "sounds": [
+            "./local/assets/notification_sound.wav"
+          ],
           "enableBackgroundRemoteNotifications": false
         }
       ]
@@ -46,6 +49,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "90ea9047-1ede-4cec-b0ec-1d389fe94634"
+      }
     }
   }
 }
