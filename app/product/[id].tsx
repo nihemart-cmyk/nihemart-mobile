@@ -1,8 +1,9 @@
-import { View, Text, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, ShoppingCart, Heart, Truck } from 'lucide-react-native';
-import { products } from '@/mocks/products';
+import { useProduct } from '@/hooks/useProduct';
 import { useApp } from '@/contexts/AppContext';
 import Colors from '@/constants/colors';
 import { useState } from 'react';
@@ -15,7 +16,15 @@ export default function ProductDetailScreen() {
   const { addToCart } = useApp();
   const [quantity, setQuantity] = useState<number>(1);
 
-  const product = products.find((p) => p.id === id);
+  const { data: product, isLoading } = useProduct(id as string);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   if (!product) {
     return (
@@ -26,7 +35,7 @@ export default function ProductDetailScreen() {
   }
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    addToCart(product as any, quantity);
     Alert.alert(
       'Added to Cart',
       `${product.name} has been added to your cart.`,
@@ -37,21 +46,22 @@ export default function ProductDetailScreen() {
     );
   };
 
-  const discount = product.discountPrice
-    ? Math.round((1 - product.discountPrice / product.price) * 100)
+  const isInStock = product.stock > 0 && product.status === 'active';
+  const discount = product.compare_at_price && product.compare_at_price > product.price
+    ? Math.round((1 - product.price / product.compare_at_price) * 100)
     : 0;
 
   return (
     <View className="flex-1 bg-background">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <Image
-          source={{ uri: product.image }}
+          source={{ uri: product.main_image_url || 'https://via.placeholder.com/400' }}
           className="w-full"
           style={{ height: width }}
           contentFit="cover"
         />
 
-        {product.discountPrice && (
+        {discount > 0 && (
           <View className="absolute top-4 right-4 bg-secondary px-3 py-2 rounded-lg">
             <Text className="text-white text-base font-bold">{discount}% OFF</Text>
           </View>
@@ -63,11 +73,6 @@ export default function ProductDetailScreen() {
               {product.brand && (
                 <Text className="text-primary text-base font-semibold mb-1">{product.brand}</Text>
               )}
-              <View className="flex-row items-center space-x-1">
-                <Star size={16} color={Colors.warning} fill={Colors.warning} />
-                <Text className="text-text text-base font-bold">{product.rating}</Text>
-                <Text className="text-textSecondary text-sm">({product.reviews} reviews)</Text>
-              </View>
             </View>
             <TouchableOpacity className="w-11 h-11 rounded-full bg-background items-center justify-center border border-border">
               <Heart size={24} color={Colors.error} />
@@ -78,17 +83,17 @@ export default function ProductDetailScreen() {
 
           <View className="flex-row items-center space-x-3 mb-4">
             <Text className="text-2xl font-bold text-primary">
-              ₹{product.discountPrice || product.price}
+              FRW {product.price}
             </Text>
-            {product.discountPrice && (
+            {product.compare_at_price && product.compare_at_price > product.price && (
               <Text className="text-xl text-textSecondary line-through">
-                ₹{product.price}
+                FRW {product.compare_at_price}
               </Text>
             )}
-            {product.discountPrice && (
+            {product.compare_at_price && product.compare_at_price > product.price && (
               <View className="bg-success/20 px-2 py-1 rounded">
                 <Text className="text-success font-semibold text-sm">
-                  Save ₹{product.price - product.discountPrice}
+                  Save FRW {product.compare_at_price - product.price}
                 </Text>
               </View>
             )}
@@ -96,7 +101,7 @@ export default function ProductDetailScreen() {
 
           <View className="flex-row items-center space-x-2 bg-primary/10 p-3 rounded mb-5">
             <Truck size={20} color={Colors.primary} />
-            <Text className="text-primary text-sm font-medium">Free delivery on orders above ₹500</Text>
+            <Text className="text-primary text-sm font-medium">Free delivery on orders above FRW 5000</Text>
           </View>
 
           <View className="h-px bg-border my-5" />
@@ -110,10 +115,6 @@ export default function ProductDetailScreen() {
 
           <View className="mb-4">
             <Text className="text-lg font-bold text-text mb-3">Product Details</Text>
-            <View className="flex-row justify-between py-2">
-              <Text className="text-textSecondary text-base">Category</Text>
-              <Text className="text-text font-semibold text-base">{product.category}</Text>
-            </View>
             {product.brand && (
               <View className="flex-row justify-between py-2">
                 <Text className="text-textSecondary text-base">Brand</Text>
@@ -121,9 +122,13 @@ export default function ProductDetailScreen() {
               </View>
             )}
             <View className="flex-row justify-between py-2">
-              <Text className="text-textSecondary text-base">Availability</Text>
-              <Text className={`text-base font-semibold ${product.inStock ? 'text-success' : 'text-error'}`}>
-                {product.inStock ? 'In Stock' : 'Out of Stock'}
+              <Text className="text-textSecondary text-base">Stock</Text>
+              <Text className="text-text font-semibold text-base">{product.stock}</Text>
+            </View>
+            <View className="flex-row justify-between py-2">
+              <Text className="text-textSecondary text-base">Status</Text>
+              <Text className={`text-base font-semibold ${isInStock ? 'text-success' : 'text-error'}`}>
+                {isInStock ? 'In Stock' : 'Out of Stock'}
               </Text>
             </View>
           </View>
@@ -142,13 +147,13 @@ export default function ProductDetailScreen() {
         </View>
 
         <TouchableOpacity
-          className={`flex-1 flex-row items-center justify-center space-x-2 rounded px-4 py-3 ${product.inStock ? 'bg-primary' : 'bg-textSecondary'}`}
+          className={`flex-1 flex-row items-center justify-center space-x-2 rounded px-4 py-3 ${isInStock ? 'bg-primary' : 'bg-textSecondary'}`}
           onPress={handleAddToCart}
-          disabled={!product.inStock}
+          disabled={!isInStock}
         >
           <ShoppingCart size={20} color={Colors.white} />
           <Text className="text-white text-base font-bold">
-            {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+            {isInStock ? 'Add to Cart' : 'Out of Stock'}
           </Text>
         </TouchableOpacity>
       </View>

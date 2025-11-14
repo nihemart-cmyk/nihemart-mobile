@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, FlatList, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { products } from '@/mocks/products';
-import { categories } from '@/mocks/categories';
+import { useCategories } from '@/hooks/useCategories';
+import { useProducts } from '@/hooks/useProducts';
 import Colors from '@/constants/colors';
 
 const { width } = Dimensions.get('window');
@@ -11,8 +12,18 @@ export default function CategoryScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
+  const { data: categories = [] } = useCategories();
   const category = categories.find((c) => c.id === id);
-  const categoryProducts = products.filter((p) => p.category === category?.name);
+
+  const {
+    data: productsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useProducts({ category: id as string, limit: 10 });
+
+  const categoryProducts = (productsData as any)?.pages.flatMap((page: any) => page.products) || [];
 
   if (!category) {
     return (
@@ -30,7 +41,7 @@ export default function CategoryScreen() {
       <Stack.Screen options={{ title: category.name }} />
       <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
         <Image
-          source={{ uri: category.image }}
+          source={{ uri: category.icon_url || 'https://via.placeholder.com/150' }}
           className="w-full h-48"
           contentFit="cover"
         />
@@ -39,45 +50,55 @@ export default function CategoryScreen() {
           <Text className="text-lg text-white opacity-90">{categoryProducts.length} Products</Text>
         </View>
 
-        <View className="p-2">
-          <View className="grid grid-cols-2 gap-2">
-            {categoryProducts.map((product) => (
+        {isLoading ? (
+          <View className="flex-1 justify-center items-center py-10">
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={categoryProducts}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            scrollEnabled={false}
+            contentContainerStyle={{ paddingHorizontal: 8 }}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.5}
+            renderItem={({ item: product }) => (
               <TouchableOpacity
-                key={product.id}
-                className="px-2 py-2 mb-2 bg-white rounded-xl overflow-hidden shadow-sm"
+                className="flex-1 m-2 mb-4 bg-white rounded-xl overflow-hidden shadow-sm"
                 onPress={() => router.push(`/product/${product.id}` as any)}
               >
                 <Image
-                  source={{ uri: product.image }}
+                  source={{ uri: product.main_image_url || 'https://via.placeholder.com/150' }}
                   className="w-full h-40"
                   contentFit="cover"
                 />
-                {product.discountPrice && (
-                  <View className="absolute top-2 right-2 bg-primary px-2 py-1 rounded-lg">
-                    <Text className="text-white text-xs font-bold">
-                      {Math.round((1 - product.discountPrice / product.price) * 100)}% OFF
-                    </Text>
-                  </View>
-                )}
                 <View className="p-3">
-                  <Text className="text-sm text-text mb-2 h-10" numberOfLines={2}>
+                  <Text className="text-primary text-xl font-bold">
+                    FRW {product.price}
+                  </Text>
+                  <Text
+                    className="text-text text-base truncate font-medium"
+                    numberOfLines={2}
+                  >
                     {product.name}
                   </Text>
-                  <View className="flex-row items-center gap-2">
-                    {product.discountPrice && (
-                      <Text className="text-sm text-textSecondary line-through">
-                        ₹{product.price}
-                      </Text>
-                    )}
-                    <Text className="text-lg font-bold text-primary">
-                      ₹{product.discountPrice || product.price}
-                    </Text>
-                  </View>
                 </View>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+            )}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View className="py-4 items-center">
+                  <Text className="text-textSecondary">Loading more...</Text>
+                </View>
+              ) : null
+            }
+          />
+        )}
       </ScrollView>
     </>
   );

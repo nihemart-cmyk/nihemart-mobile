@@ -1,26 +1,33 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { categories } from '@/mocks/categories';
+import { useCategories } from '@/hooks/useCategories';
 import Colors from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const { data: categories = [], isLoading } = useCategories();
 
   return (
     <>
       <Stack.Screen options={{ title: 'Categories' }} />
       <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
-        <View className="flex-row flex-wrap p-2">
-          {categories.map((category) => (
+        {isLoading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : (
+          <View className="flex-row flex-wrap p-2">
+            {categories.map((category) => (
             <TouchableOpacity
               key={category.id}
               className="w-[47%] h-36 m-[1.5%] rounded-xl overflow-hidden shadow-lg"
               onPress={() => router.push(`/category/${category.id}` as any)}
             >
               <Image
-                source={{ uri: category.image }}
+                source={{ uri: category.icon_url || 'https://via.placeholder.com/150' }}
                 className="w-full h-full"
                 contentFit="cover"
               />
@@ -28,8 +35,9 @@ export default function CategoriesScreen() {
                 <Text className="text-white text-xl font-bold text-center">{category.name}</Text>
               </View>
             </TouchableOpacity>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </>
   );
