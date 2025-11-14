@@ -4,10 +4,9 @@ import { useAuthStore } from "@/store/auth.store";
 import { Image } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react-native";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import React from "react";
 
 export default function CartScreen() {
    const { cart, updateCartQuantity, removeFromCart, cartTotal, placeOrder } =
@@ -30,41 +29,8 @@ export default function CartScreen() {
          return;
       }
 
-      Alert.alert(
-         t("checkout.title"),
-         `${t("cart.total")}: ₹${cartTotal}\n\n${t("checkout.deliveryAddress")}`,
-         [
-            { text: t("common.cancel"), style: "cancel" },
-            {
-               text: t("common.confirm"),
-               onPress: async () => {
-                  setIsPlacingOrder(true);
-                  try {
-                     await placeOrder(
-                        "Default Address: 123 Main St, City, State 123456"
-                     );
-                     Alert.alert(
-                        t("checkout.orderPlaced"),
-                        t("checkout.orderSuccess"),
-                        [
-                           {
-                              text: "OK",
-                              onPress: () => router.push("/orders" as any),
-                           },
-                        ]
-                     );
-                  } catch {
-                     Alert.alert(
-                        t("common.error"),
-                        "Failed to place order. Please try again."
-                     );
-                  } finally {
-                     setIsPlacingOrder(false);
-                  }
-               },
-            },
-         ]
-      );
+      // Navigate directly to checkout screen
+      router.push("/checkout" as any);
    };
 
    const handleRemove = (productId: string, productName: string) => {

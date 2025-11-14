@@ -1,4 +1,13 @@
 import Colors from "@/constants/colors";
+import {
+   useAcceptRiderAssignment,
+   useCompleteRiderAssignment,
+   useRejectRiderAssignment,
+   useRiderOrders,
+} from "@/hooks/useRiderOrders";
+import { useRiderByUserId } from "@/hooks/useRiders";
+import { useAuthStore } from "@/store/auth.store";
+import toast from "@/utils/toast";
 import { Stack, useRouter } from "expo-router";
 import {
    CheckCircle,
@@ -10,8 +19,9 @@ import {
    Search,
    XCircle,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
+   ActivityIndicator,
    RefreshControl,
    ScrollView,
    Text,
@@ -20,57 +30,26 @@ import {
    View,
 } from "react-native";
 
-// Mock data
-const mockOrders = [
-   {
-      id: "1",
-      orderNumber: "#ORD-004",
-      location: "Kacyiru, KG 123 St",
-      amount: "15,000",
-      time: "Just now",
-      status: "assigned",
-      customer: "John Doe",
-      items: 3,
-   },
-   {
-      id: "2",
-      orderNumber: "#ORD-005",
-      location: "Gisozi, KG 456 St",
-      amount: "9,500",
-      time: "30 min ago",
-      status: "accepted",
-      customer: "Jane Smith",
-      items: 2,
-   },
-   {
-      id: "3",
-      orderNumber: "#ORD-006",
-      location: "Nyarutarama, KG 789 St",
-      amount: "12,500",
-      time: "1 hour ago",
-      status: "completed",
-      customer: "Mike Johnson",
-      items: 4,
-   },
-   {
-      id: "4",
-      orderNumber: "#ORD-007",
-      location: "Kimihurura, KG 321 St",
-      amount: "8,000",
-      time: "2 hours ago",
-      status: "rejected",
-      customer: "Sarah Wilson",
-      items: 1,
-   },
-];
+// Helper to format time
+const getTimeAgo = (dateString: string) => {
+   const date = new Date(dateString);
+   const now = new Date();
+   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+   if (seconds < 60) return "Just now";
+   if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+   if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+   return `${Math.floor(seconds / 86400)} days ago`;
+};
 
 type OrderStatus = "assigned" | "accepted" | "completed" | "rejected";
 
 interface OrderCardProps {
-   order: (typeof mockOrders)[0];
+   order: any;
    onAccept: (id: string) => void;
    onReject: (id: string) => void;
    onComplete: (id: string) => void;
+   isLoading?: boolean;
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({
@@ -78,8 +57,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
    onAccept,
    onReject,
    onComplete,
+   isLoading = false,
 }) => {
-   const getStatusColor = (status: OrderStatus) => {
+   const getStatusColor = (status: string) => {
       switch (status) {
          case "assigned":
             return "bg-blue-100 text-blue-700";
@@ -94,7 +74,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
       }
    };
 
-   const getStatusText = (status: OrderStatus) => {
+   const getStatusText = (status: string) => {
       switch (status) {
          case "assigned":
             return "New Assignment";
@@ -113,27 +93,28 @@ const OrderCard: React.FC<OrderCardProps> = ({
       <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
          {/* Header */}
          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
+            <View className="flex-row items-center flex-1">
                <View className="w-10 h-10 bg-orange-100 rounded-lg items-center justify-center mr-3">
                   <Package
                      size={20}
                      color={Colors.secondary}
                   />
                </View>
-               <View>
+               <View className="flex-1">
                   <Text className="font-bold text-gray-900 text-lg">
-                     {order.orderNumber}
+                     {order.order_number}
                   </Text>
                   <Text className="text-gray-500 text-sm">
-                     {order.customer} • {order.items} items
+                     {order.customer_first_name} {order.customer_last_name} •{" "}
+                     {order.items_count} items
                   </Text>
                </View>
             </View>
             <View
-               className={`px-3 py-1 rounded-full ${getStatusColor(order.status as OrderStatus)}`}
+               className={`px-3 py-1 rounded-full ${getStatusColor(order.assignment_status)}`}
             >
                <Text className="text-xs font-medium">
-                  {getStatusText(order.status as OrderStatus)}
+                  {getStatusText(order.assignment_status)}
                </Text>
             </View>
          </View>
@@ -145,7 +126,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                color={Colors.textSecondary}
             />
             <Text className="text-gray-600 text-sm ml-2 flex-1">
-               {order.location}
+               {order.delivery_address}, {order.delivery_city}
             </Text>
          </View>
 
@@ -156,49 +137,77 @@ const OrderCard: React.FC<OrderCardProps> = ({
                   size={14}
                   color={Colors.textSecondary}
                />
-               <Text className="text-gray-500 text-xs ml-1">{order.time}</Text>
+               <Text className="text-gray-500 text-xs ml-1">
+                  {getTimeAgo(order.assigned_at)}
+               </Text>
             </View>
 
             <View className="flex-row items-center">
                <Text className="font-bold text-gray-900 mr-3">
-                  RWF {order.amount}
+                  RWF {order.total?.toLocaleString()}
                </Text>
 
-               {order.status === "assigned" && (
+               {order.assignment_status === "assigned" && (
                   <View className="flex-row">
                      <TouchableOpacity
-                        onPress={() => onAccept(order.id)}
+                        onPress={() => onAccept(order.assignment_id)}
+                        disabled={isLoading}
                         className="bg-green-600 rounded-lg px-3 py-2 mr-2"
                      >
-                        <CheckCircle
-                           size={16}
-                           color="white"
-                        />
+                        {isLoading ? (
+                           <ActivityIndicator
+                              size="small"
+                              color="white"
+                           />
+                        ) : (
+                           <CheckCircle
+                              size={16}
+                              color="white"
+                           />
+                        )}
                      </TouchableOpacity>
                      <TouchableOpacity
-                        onPress={() => onReject(order.id)}
+                        onPress={() => onReject(order.assignment_id)}
+                        disabled={isLoading}
                         className="bg-red-600 rounded-lg px-3 py-2"
                      >
-                        <XCircle
-                           size={16}
-                           color="white"
-                        />
+                        {isLoading ? (
+                           <ActivityIndicator
+                              size="small"
+                              color="white"
+                           />
+                        ) : (
+                           <XCircle
+                              size={16}
+                              color="white"
+                           />
+                        )}
                      </TouchableOpacity>
                   </View>
                )}
 
-               {order.status === "accepted" && (
+               {order.assignment_status === "accepted" && (
                   <TouchableOpacity
-                     onPress={() => onComplete(order.id)}
+                     onPress={() => onComplete(order.assignment_id)}
+                     disabled={isLoading}
                      className="bg-secondary rounded-lg px-4 py-2 flex-row items-center"
                   >
-                     <CheckCircle
-                        size={16}
-                        color="white"
-                     />
-                     <Text className="text-white text-sm font-medium ml-1">
-                        Complete
-                     </Text>
+                     {isLoading ? (
+                        <ActivityIndicator
+                           size="small"
+                           color="white"
+                        />
+                     ) : (
+                        <>
+                           <CheckCircle
+                              size={16}
+                              color="white"
+                           />
+                           <Text className="text-white text-sm font-medium ml-1">
+                              Complete
+                           </Text>
+                        </>
+                     )}
                   </TouchableOpacity>
                )}
             </View>
@@ -211,50 +220,76 @@ export default function RiderOrders() {
    const router = useRouter();
    const [searchQuery, setSearchQuery] = useState("");
    const [refreshing, setRefreshing] = useState(false);
-   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
-   const [orders, setOrders] = useState(mockOrders);
+   const [activeFilter, setActiveFilter] = useState<string>("all");
+
+   const user = useAuthStore((state) => state.user);
+   const { data: rider } = useRiderByUserId(user?.id as any);
+   const { data: ordersData, isLoading, refetch } = useRiderOrders(rider?.id);
+
+   const acceptMutation = useAcceptRiderAssignment();
+   const rejectMutation = useRejectRiderAssignment();
+   const completeMutation = useCompleteRiderAssignment();
+
+   const orders = useMemo(() => {
+      if (!ordersData) return [];
+      return (ordersData as any)?.data || [];
+   }, [ordersData]);
 
    const onRefresh = async () => {
       setRefreshing(true);
-      // Simulate API call
-      setTimeout(() => setRefreshing(false), 1000);
+      await refetch();
+      setRefreshing(false);
    };
 
-   const filteredOrders = orders.filter((order) => {
-      const matchesSearch =
-         order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         order.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         order.customer.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter =
-         activeFilter === "all" || order.status === activeFilter;
-      return matchesSearch && matchesFilter;
-   });
+   const filteredOrders = useMemo(
+      () =>
+         orders.filter((order: any) => {
+            const matchesSearch =
+               order.order_number
+                  ?.toLowerCase()
+                  .includes(searchQuery.toLowerCase()) ||
+               order.delivery_address
+                  ?.toLowerCase()
+                  .includes(searchQuery.toLowerCase()) ||
+               `${order.customer_first_name} ${order.customer_last_name}`
+                  .toLowerCase()
+                  .includes(searchQuery.toLowerCase());
+            const matchesFilter =
+               activeFilter === "all" ||
+               order.assignment_status === activeFilter;
+            return matchesSearch && matchesFilter;
+         }),
+      [orders, searchQuery, activeFilter]
+   );
 
-   const handleAccept = (id: string) => {
-      setOrders(
-         orders.map((order) =>
-            order.id === id ? { ...order, status: "accepted" } : order
-         )
-      );
+   const handleAccept = async (assignmentId: string) => {
+      try {
+         await acceptMutation.mutateAsync(assignmentId);
+         toast.success("Order accepted!");
+      } catch (error) {
+         toast.error("Failed to accept order");
+      }
    };
 
-   const handleReject = (id: string) => {
-      setOrders(
-         orders.map((order) =>
-            order.id === id ? { ...order, status: "rejected" } : order
-         )
-      );
+   const handleReject = async (assignmentId: string) => {
+      try {
+         await rejectMutation.mutateAsync(assignmentId);
+         toast.success("Order rejected");
+      } catch (error) {
+         toast.error("Failed to reject order");
+      }
    };
 
-   const handleComplete = (id: string) => {
-      setOrders(
-         orders.map((order) =>
-            order.id === id ? { ...order, status: "completed" } : order
-         )
-      );
+   const handleComplete = async (assignmentId: string) => {
+      try {
+         await completeMutation.mutateAsync(assignmentId);
+         toast.success("Delivery completed!");
+      } catch (error) {
+         toast.error("Failed to complete delivery");
+      }
    };
 
-   const filterOptions: { value: OrderStatus | "all"; label: string }[] = [
+   const filterOptions: { value: string; label: string }[] = [
       { value: "all", label: "All Orders" },
       { value: "assigned", label: "New" },
       { value: "accepted", label: "In Progress" },
@@ -351,7 +386,17 @@ export default function RiderOrders() {
                   />
                }
             >
-               {filteredOrders.length === 0 ? (
+               {isLoading && !refreshing ? (
+                  <View className="items-center justify-center py-12">
+                     <ActivityIndicator
+                        size="large"
+                        color={Colors.secondary}
+                     />
+                     <Text className="text-gray-500 text-lg font-medium mt-4">
+                        Loading orders...
+                     </Text>
+                  </View>
+               ) : filteredOrders.length === 0 ? (
                   <View className="items-center justify-center py-12">
                      <Package
                         size={64}
@@ -367,13 +412,18 @@ export default function RiderOrders() {
                      </Text>
                   </View>
                ) : (
-                  filteredOrders.map((order) => (
+                  filteredOrders.map((order: any) => (
                      <OrderCard
-                        key={order.id}
+                        key={order.assignment_id}
                         order={order}
                         onAccept={handleAccept}
                         onReject={handleReject}
                         onComplete={handleComplete}
+                        isLoading={
+                           acceptMutation.isPending ||
+                           rejectMutation.isPending ||
+                           completeMutation.isPending
+                        }
                      />
                   ))
                )}

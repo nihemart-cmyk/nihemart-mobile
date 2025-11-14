@@ -2,11 +2,13 @@ import Colors from "@/constants/colors";
 import { useApp } from "@/contexts/AppContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import useRequireAuth from "@/hooks/useRequireAuth";
+import { useRiderOrders } from "@/hooks/useRiderOrders";
 import { useRiderByUserId } from "@/hooks/useRiders";
 import { useAuthStore } from "@/store/auth.store";
 import { Stack } from "expo-router";
 import {
    Bell,
+   ChevronRight,
    DollarSign,
    LogOut,
    Package,
@@ -15,7 +17,7 @@ import {
    Star,
    User,
 } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import {
    Alert,
    ScrollView,
@@ -32,14 +34,29 @@ export default function RiderProfileScreen() {
    const { user, signOut } = useAuthStore();
 
    const { data: rider, isLoading: riderLoading } = useRiderByUserId(user?.id);
+   const { data: ordersData } = useRiderOrders(rider?.id);
+   const orders = useMemo(() => {
+      if (!ordersData) return [];
+      return (ordersData as any)?.data || [];
+   }, [ordersData]);
 
    if (authLoading) return null;
 
-   const riderStats = {
-      rating: 4.8,
-      totalDeliveries: 156,
-      totalEarnings: 8950,
-   };
+   // Calculate rider stats from real data
+   const riderStats = useMemo(() => {
+      const completed = orders.filter(
+         (o: any) => o.assignment_status === "completed"
+      ).length;
+      const totalEarnings = orders
+         .filter((o: any) => o.assignment_status === "completed")
+         .reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+
+      return {
+         rating: 4.8, // This would come from a rider ratings table
+         totalDeliveries: completed,
+         totalEarnings: Math.round(totalEarnings),
+      };
+   }, [orders]);
 
    const handleModeSwitch = (value: boolean) => {
       const newMode = value ? "user" : "rider";
@@ -60,95 +77,107 @@ export default function RiderProfileScreen() {
       <>
          <Stack.Screen options={{ title: "Rider Profile" }} />
          <ScrollView
-            className="flex-1 bg-[${Colors.background}]"
+            className="flex-1 bg-gray-50"
             showsVerticalScrollIndicator={false}
          >
-            {/* Header Section */}
-            <View
-               className={`bg-[${Colors.secondary}] items-center rounded-b-3xl px-6 py-8`}
-            >
-               <View className="mb-4 relative">
-                  <View className="w-20 h-20 rounded-full border-4 border-white bg-white/20 items-center justify-center">
-                     <User
-                        size={40}
-                        color={Colors.white}
-                     />
+            {/* Header Section with Gradient */}
+            <View className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-b-[40px] px-6 pb-8 pt-6 shadow-lg">
+               <View className="items-center">
+                  <View className="mb-4 relative">
+                     <View className="w-24 h-24 rounded-3xl border-4 border-white/30 bg-white/20 items-center justify-center backdrop-blur shadow-lg">
+                        <User
+                           size={48}
+                           color={Colors.white}
+                        />
+                     </View>
+                     <View className="absolute -bottom-2 -right-2 bg-amber-400 flex-row items-center px-3 py-1.5 rounded-full shadow-md">
+                        <Star
+                           size={14}
+                           color={Colors.white}
+                           fill={Colors.white}
+                        />
+                        <Text className="text-white font-bold text-sm ml-1">
+                           {riderStats.rating}
+                        </Text>
+                     </View>
                   </View>
-                  <View
-                     className={`absolute bottom-0 right-0 bg-[${Colors.warning}] flex-row items-center px-2 py-1 rounded-xl`}
-                  >
-                     <Star
-                        size={14}
-                        color={Colors.white}
-                        fill={Colors.white}
-                     />
-                     <Text className="text-white font-bold text-sm ml-1">
-                        {riderStats.rating}
+                  <Text className="text-2xl font-bold text-white mb-1">
+                     {rider?.full_name ?? user?.email?.split("@")[0] ?? "Rider"}
+                  </Text>
+                  <View className="bg-white/20 px-4 py-1.5 rounded-full backdrop-blur">
+                     <Text className="text-white/95 text-sm font-semibold">
+                        Delivery Partner
                      </Text>
                   </View>
                </View>
-               <Text className="text-2xl font-bold text-white mb-1">
-                  {rider?.full_name ?? user?.email?.split("@")[0] ?? "Rider"}
-               </Text>
-               <Text className="text-white/90 text-base">Delivery Partner</Text>
             </View>
 
             {/* Stats Section */}
-            <View className="flex-row p-4 space-x-3">
-               <View className="flex-1 bg-white rounded-xl p-4 items-center shadow">
-                  <Package
-                     size={24}
-                     color={Colors.secondary}
-                  />
-                  <Text className="text-xl font-bold text-gray-800 mt-2">
+            <View className="flex-row px-5 -mt-8 mb-6 gap-3">
+               <View className="flex-1 bg-white rounded-3xl p-5 items-center shadow-md border border-gray-100">
+                  <View className="w-12 h-12 bg-orange-50 rounded-2xl items-center justify-center mb-3">
+                     <Package
+                        size={24}
+                        color={Colors.secondary}
+                     />
+                  </View>
+                  <Text className="text-2xl font-bold text-gray-900 mb-1">
                      {riderStats.totalDeliveries}
                   </Text>
-                  <Text className="text-xs text-gray-500 mt-1">Deliveries</Text>
-               </View>
-               <View className="flex-1 bg-white rounded-xl p-4 items-center shadow">
-                  <DollarSign
-                     size={24}
-                     color={Colors.success}
-                  />
-                  <Text className="text-xl font-bold text-gray-800 mt-2">
-                     ₹{riderStats.totalEarnings}
+                  <Text className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                     Deliveries
                   </Text>
-                  <Text className="text-xs text-gray-500 mt-1">Earnings</Text>
                </View>
-               <View className="flex-1 bg-white rounded-xl p-4 items-center shadow">
-                  <Star
-                     size={24}
-                     color={Colors.warning}
-                  />
-                  <Text className="text-xl font-bold text-gray-800 mt-2">
+               <View className="flex-1 bg-white rounded-3xl p-5 items-center shadow-md border border-gray-100">
+                  <View className="w-12 h-12 bg-green-50 rounded-2xl items-center justify-center mb-3">
+                     <DollarSign
+                        size={24}
+                        color={Colors.success}
+                     />
+                  </View>
+                  <Text className="text-2xl font-bold text-gray-900 mb-1">
+                     RWF {riderStats.totalEarnings?.toLocaleString()}
+                  </Text>
+                  <Text className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                     Earnings
+                  </Text>
+               </View>
+               <View className="flex-1 bg-white rounded-3xl p-5 items-center shadow-md border border-gray-100">
+                  <View className="w-12 h-12 bg-amber-50 rounded-2xl items-center justify-center mb-3">
+                     <Star
+                        size={24}
+                        color={Colors.warning}
+                     />
+                  </View>
+                  <Text className="text-2xl font-bold text-gray-900 mb-1">
                      {riderStats.rating}
                   </Text>
-                  <Text className="text-xs text-gray-500 mt-1">Rating</Text>
+                  <Text className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                     Rating
+                  </Text>
                </View>
             </View>
 
             {/* Settings Section */}
-            <View className="p-4">
-               <Text className="text-lg font-bold text-gray-800 mb-3">
+            <View className="px-5">
+               <Text className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider">
                   Settings
                </Text>
 
                {/* Customer Mode Switch */}
-               <View className="bg-white rounded-xl p-4 mb-3 flex-row items-center justify-between shadow">
+               <View className="bg-white rounded-3xl p-5 mb-3 flex-row items-center justify-between shadow-sm border border-gray-100">
                   <View className="flex-row items-center flex-1">
-                     <View
-                        className={`w-10 h-10 rounded-full bg-[${Colors.primary}] bg-opacity-10 items-center justify-center mr-3`}
-                     >
+                     <View className="w-12 h-12 rounded-2xl bg-blue-50 items-center justify-center mr-4">
                         <ShoppingBag
-                           size={20}
+                           size={22}
                            color={Colors.primary}
                         />
                      </View>
-                     <View>
-                        <Text className="text-base font-semibold text-gray-800">
+                     <View className="flex-1">
+                        <Text className="text-base font-bold text-gray-900 mb-1">
                            Customer Mode
                         </Text>
-                        <Text className="text-sm text-gray-500 mt-0.5">
+                        <Text className="text-sm text-gray-500">
                            Switch to shopping experience
                         </Text>
                      </View>
@@ -166,7 +195,7 @@ export default function RiderProfileScreen() {
 
                {/* Test Notification */}
                <TouchableOpacity
-                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow"
+                  className="bg-white rounded-3xl p-5 mb-3 flex-row items-center justify-between shadow-sm border border-gray-100"
                   onPress={() => {
                      scheduleLocalNotification(
                         "New Delivery Available",
@@ -177,52 +206,62 @@ export default function RiderProfileScreen() {
                      Alert.alert("Success", "Test delivery notification sent!");
                   }}
                >
-                  <View
-                     className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}
-                  >
-                     <Bell
-                        size={20}
-                        color={Colors.secondary}
-                     />
+                  <View className="flex-row items-center flex-1">
+                     <View className="w-12 h-12 rounded-2xl bg-purple-50 items-center justify-center mr-4">
+                        <Bell
+                           size={22}
+                           color="#8b5cf6"
+                        />
+                     </View>
+                     <Text className="text-base font-bold text-gray-900">
+                        Test Notification
+                     </Text>
                   </View>
-                  <Text className="text-base font-medium text-gray-800">
-                     Test Notification
-                  </Text>
+                  <ChevronRight
+                     size={20}
+                     color={Colors.textSecondary}
+                  />
                </TouchableOpacity>
 
                {/* Account Settings */}
-               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow">
-                  <View
-                     className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}
-                  >
-                     <Settings
-                        size={20}
-                        color={Colors.text}
-                     />
+               <TouchableOpacity className="bg-white rounded-3xl p-5 mb-3 flex-row items-center justify-between shadow-sm border border-gray-100">
+                  <View className="flex-row items-center flex-1">
+                     <View className="w-12 h-12 rounded-2xl bg-gray-50 items-center justify-center mr-4">
+                        <Settings
+                           size={22}
+                           color={Colors.text}
+                        />
+                     </View>
+                     <Text className="text-base font-bold text-gray-900">
+                        Account Settings
+                     </Text>
                   </View>
-                  <Text className="text-base font-medium text-gray-800">
-                     Account Settings
-                  </Text>
+                  <ChevronRight
+                     size={20}
+                     color={Colors.textSecondary}
+                  />
                </TouchableOpacity>
 
                {/* Logout */}
                <TouchableOpacity
                   onPress={() => signOut()}
-                  className="bg-white rounded-xl p-4 flex-row items-center shadow"
+                  className="bg-white rounded-3xl p-5 flex-row items-center justify-between shadow-sm border border-red-100 mb-8"
                >
-                  <View
-                     className={`w-10 h-10 rounded-full bg-[${Colors.background}] items-center justify-center mr-3`}
-                  >
-                     <LogOut
-                        size={20}
-                        color={Colors.error}
-                     />
+                  <View className="flex-row items-center flex-1">
+                     <View className="w-12 h-12 rounded-2xl bg-red-50 items-center justify-center mr-4">
+                        <LogOut
+                           size={22}
+                           color={Colors.error}
+                        />
+                     </View>
+                     <Text className="text-base font-bold text-red-600">
+                        Logout
+                     </Text>
                   </View>
-                  <Text
-                     className={`text-base font-medium text-[${Colors.error}]`}
-                  >
-                     Logout
-                  </Text>
+                  <ChevronRight
+                     size={20}
+                     color={Colors.error}
+                  />
                </TouchableOpacity>
             </View>
          </ScrollView>

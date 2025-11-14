@@ -3,7 +3,7 @@ import { useOrders } from "@/hooks/useOrders";
 import useProfile from "@/hooks/useProfile";
 import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
    ActivityIndicator,
    ScrollView,
@@ -48,26 +48,20 @@ const CheckoutScreen = ({
 }) => {
    const router = useRouter();
    const user = useAuthStore((s) => s.user);
+   const authLoading = useAuthStore((s) => s.loading);
    const isLoggedIn = Boolean(user);
+
    const { cart: cartItems, clearCart } = useApp();
    const { createOrder } = useOrders();
-   const { addresses, selected: defaultAddress } = useAddresses();
+   const { selected: defaultAddress } = useAddresses();
+   const { profile } = useProfile();
 
-   // Selected address for delivery
-   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-
-   const [formData, setFormData] = useState({
-      delivery_notes: "",
-   });
-
-   const [orderItems, setOrderItems] = useState<CartItem[]>([]);
-   const [errors, setErrors] = useState<any>({});
-   const [isSubmitting, setIsSubmitting] = useState(false);
-
-   // Section states
+   // Local state - minimal
+   const [selectedAddress, setSelectedAddress] = useState<Address | null>(
+      defaultAddress
+   );
+   const [deliveryNotes, setDeliveryNotes] = useState("");
    const [instructionsOpen, setInstructionsOpen] = useState(false);
-
-   // Payment - default to Cash on Delivery for now
    const [paymentMethod, setPaymentMethod] = useState<
       keyof typeof PAYMENT_METHODS | "cash_on_delivery" | ""
    >("cash_on_delivery");
@@ -75,9 +69,10 @@ const CheckoutScreen = ({
       mtn_momo?: string;
       airtel_money?: string;
    }>({});
+   const [isSubmitting, setIsSubmitting] = useState(false);
    const [paymentInProgress, setPaymentInProgress] = useState(false);
+   const [errors, setErrors] = useState<Record<string, string>>({});
 
-   // KPay payment functionality
    const {
       initiatePayment,
       formatPhoneNumber,
@@ -85,105 +80,98 @@ const CheckoutScreen = ({
       isInitiating,
    } = useKPayPayment();
 
-   // Calculate totals
+   // If not logged in, redirect
+   if (!authLoading && !isLoggedIn && !isRetryMode) {
+      router.replace("/signin");
+      return (
+         <View className="flex-1 items-center justify-center">
+            <ActivityIndicator
+               size="large"
+               color="#ff6b35"
+            />
+            <Text className="text-gray-600 mt-4">Redirecting...</Text>
+         </View>
+      );
+   }
+
+   if (authLoading) {
+      return (
+         <View className="flex-1 items-center justify-center">
+            <ActivityIndicator
+               size="large"
+               color="#ff6b35"
+            />
+            <Text className="text-gray-600 mt-4">Loading...</Text>
+         </View>
+      );
+   }
+
+   // Empty cart check
+   if (cartItems.length === 0 && !isRetryMode) {
+      return (
+         <View className="flex-1 items-center justify-center px-4">
+            <ShoppingCart
+               className="text-gray-400 mb-4"
+               size={64}
+            />
+            <Text className="text-2xl font-bold text-gray-900 mb-2 text-center">
+               Your cart is empty
+            </Text>
+            <Text className="text-gray-600 text-center mb-8">
+               Add some items to your cart before checking out
+            </Text>
+            <TouchableOpacity
+               onPress={() => router.push("/" as any)}
+               className="bg-orange-500 px-6 py-3 rounded-lg"
+            >
+               <Text className="text-white font-semibold">
+                  Continue Shopping
+               </Text>
+            </TouchableOpacity>
+         </View>
+      );
+   }
+
+   // Process cart items once
+   const orderItems: CartItem[] = cartItems.map((item: any) => {
+      if (item.product) {
+         return {
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.discountPrice || item.product.price || 0,
+            quantity: item.quantity || 1,
+            sku: item.product.sku || undefined,
+            variation_id:
+               item.product_variation_id || item.variation_id || undefined,
+            variation_name: item.variation_name || undefined,
+         };
+      }
+      return {
+         ...item,
+         id: typeof item.id === "string" ? item.id.replace(/-$/, "") : item.id,
+         variation_id:
+            typeof item.product_variation_id === "string"
+               ? item.product_variation_id.replace(/-$/, "")
+               : item.variation_id || item.product_variation_id,
+      };
+   });
+
+   // Calculations
    const subtotal = orderItems.reduce(
       (sum, item) =>
          sum + (Number(item.price) || 0) * (Number(item.quantity) || 0),
       0
    );
-
-   const transport = 2000; // Fixed delivery fee for simplicity
+   const transport = 2000;
    const total = subtotal + transport;
 
-   // Set default address when addresses are loaded
-   useEffect(() => {
-      if (defaultAddress && !selectedAddress) {
-         setSelectedAddress(defaultAddress);
-      }
-   }, [defaultAddress]);
+   // Get customer info
+   const fullName = profile?.full_name ?? user?.user_metadata?.full_name ?? "";
+   const nameParts = fullName.trim().split(" ").filter(Boolean);
+   const customerEmail = user?.email || "";
+   const customerFirstName = nameParts[0] || "";
+   const customerLastName = nameParts.slice(1).join(" ") || "";
 
-   // Sync cart items
-   useEffect(() => {
-      if (Array.isArray(cartItems)) {
-         // Support both `useApp().cart` shape ({ product, quantity }) and
-         // old cart item shapes used elsewhere in the app
-         const cleaned = cartItems.map((item: any) => {
-            if (item.product) {
-               return {
-                  id: item.product.id,
-                  name: item.product.name,
-                  price: item.product.discountPrice || item.product.price || 0,
-                  quantity: item.quantity || 1,
-                  sku: item.product.sku || undefined,
-                  variation_id:
-                     item.product_variation_id ||
-                     item.variation_id ||
-                     undefined,
-                  variation_name: item.variation_name || undefined,
-               } as CartItem;
-            }
-
-            return {
-               ...item,
-               id:
-                  typeof item.id === "string"
-                     ? item.id.replace(/-$/, "")
-                     : item.id,
-               variation_id:
-                  typeof item.product_variation_id === "string"
-                     ? item.product_variation_id.replace(/-$/, "")
-                     : item.variation_id || item.product_variation_id,
-            } as CartItem;
-         });
-         setOrderItems(cleaned);
-      }
-   }, [cartItems]);
-
-   // Prefer profile row (from `profiles` table) for the user's full name
-   // then fall back to auth `user.user_metadata.full_name` and finally
-   // to an empty string. This ensures checkout shows the same name as
-   // the profile page when available.
-   const { profile } = useProfile();
-
-   const getCustomerInfo = () => {
-      if (!user && !profile) return { email: "", firstName: "", lastName: "" };
-
-      const fullName =
-         profile?.full_name ?? user?.user_metadata?.full_name ?? "";
-      const nameParts = fullName.split(" ").filter(Boolean);
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
-      return {
-         email: user?.email || "",
-         firstName,
-         lastName,
-      };
-   };
-
-   const customerInfo = getCustomerInfo();
-
-   const validateForm = () => {
-      const formErrors: any = {};
-      const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-
-      if (!customerInfo.email || !emailPattern.test(customerInfo.email)) {
-         formErrors.email = "Please ensure your email is valid";
-      }
-
-      if (!selectedAddress) {
-         formErrors.address = "Please select a delivery address";
-      }
-
-      // Phone is optional if address has one, otherwise validate
-      if (!selectedAddress?.phone) {
-         formErrors.phone = "Please ensure your address has a phone number";
-      }
-
-      return formErrors;
-   };
-
-   // Get address display text
    const getAddressDisplayText = (address: Address) => {
       const parts = [
          address.house_number,
@@ -193,10 +181,29 @@ const CheckoutScreen = ({
       return parts.length > 0 ? parts.join(", ") : address.display_name || "";
    };
 
-   const handleCreateOrder = async () => {
-      if (isSubmitting) return;
+   const validateCheckout = () => {
+      const newErrors: Record<string, string> = {};
 
-      const formErrors = validateForm();
+      if (
+         !customerEmail ||
+         !/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(customerEmail)
+      ) {
+         newErrors.email = "Please ensure your email is valid";
+      }
+
+      if (!selectedAddress) {
+         newErrors.address = "Please select a delivery address";
+      } else if (!selectedAddress.phone) {
+         newErrors.phone = "Please ensure your address has a phone number";
+      }
+
+      return newErrors;
+   };
+
+   const handleCreateOrder = async () => {
+      if (isSubmitting || paymentInProgress) return;
+
+      const formErrors = validateCheckout();
       if (Object.keys(formErrors).length > 0) {
          setErrors(formErrors);
          toast.error("Please fix the errors and try again");
@@ -205,22 +212,17 @@ const CheckoutScreen = ({
 
       if (!isLoggedIn) {
          toast.error("Please login to place order");
-         router.push("/signin");
+         router.push("/signin" as any);
          return;
       }
 
-      if (orderItems.length === 0) {
-         toast.error("Your cart is empty");
+      if (orderItems.length === 0 || !selectedAddress || !user) {
+         toast.error("Missing required information");
          return;
       }
 
       setIsSubmitting(true);
       setErrors({});
-
-      if (!selectedAddress) {
-         toast.error("Please select a delivery address");
-         return;
-      }
 
       try {
          const deliveryAddress = getAddressDisplayText(selectedAddress);
@@ -228,19 +230,19 @@ const CheckoutScreen = ({
 
          const orderData = {
             order: {
-               user_id: user!.id,
+               user_id: user.id,
                subtotal: subtotal,
                tax: transport,
                total: total,
-               customer_email: customerInfo.email.trim(),
-               customer_first_name: customerInfo.firstName.trim(),
-               customer_last_name: customerInfo.lastName.trim(),
+               customer_email: customerEmail.trim(),
+               customer_first_name: customerFirstName.trim(),
+               customer_last_name: customerLastName.trim(),
                customer_phone: selectedAddress.phone || "",
                delivery_address: deliveryAddress,
                delivery_city: deliveryCity,
                status: "pending" as const,
                payment_method: paymentMethod || "cash_on_delivery",
-               delivery_notes: formData.delivery_notes.trim() || undefined,
+               delivery_notes: deliveryNotes.trim() || undefined,
             },
             items: orderItems.map((item) => ({
                product_id: item.id,
@@ -259,11 +261,10 @@ const CheckoutScreen = ({
             createOrder.mutate(orderData, {
                onSuccess: (createdOrder: any) => {
                   clearCart();
-                  setOrderItems([]);
                   toast.success(
                      `Order #${createdOrder.order_number} created successfully!`
                   );
-                  router.push("/orders");
+                  router.push("/orders" as any);
                },
                onError: (error: any) => {
                   toast.error(
@@ -287,7 +288,7 @@ const CheckoutScreen = ({
                      : formatPhoneNumber(selectedAddress?.phone || "");
 
                const customerFullName =
-                  `${customerInfo.firstName} ${customerInfo.lastName}`.trim();
+                  `${customerFirstName} ${customerLastName}`.trim();
 
                const cartSnapshot = orderItems.map((it) => ({
                   product_id: it.id,
@@ -299,7 +300,6 @@ const CheckoutScreen = ({
                   variation_name: it.variation_name,
                }));
 
-               // Get redirect URL for mobile app
                const apiUrl =
                   process.env.EXPO_PUBLIC_API_URL ||
                   process.env.EXPO_PUBLIC_SITE_URL ||
@@ -309,7 +309,7 @@ const CheckoutScreen = ({
                const paymentRequest = {
                   amount: total,
                   customerName: customerFullName,
-                  customerEmail: customerInfo.email,
+                  customerEmail: customerEmail,
                   customerPhone,
                   paymentMethod: paymentMethod as keyof typeof PAYMENT_METHODS,
                   redirectUrl,
@@ -331,16 +331,11 @@ const CheckoutScreen = ({
                if (paymentResult.success && paymentResult.checkoutUrl) {
                   toast.success("Redirecting to payment gateway...");
 
-                  // For mobile, open payment URL in external browser
                   const canOpen = await Linking.canOpenURL(
                      paymentResult.checkoutUrl
                   );
                   if (canOpen) {
                      await Linking.openURL(paymentResult.checkoutUrl);
-                     // Navigate to payment status page if paymentId is available
-                     if (paymentResult.paymentId) {
-                        router.push(`/payment/${paymentResult.paymentId}`);
-                     }
                   } else {
                      toast.error(
                         "Unable to open payment gateway. Please try again."
@@ -352,9 +347,7 @@ const CheckoutScreen = ({
                   setPaymentInProgress(false);
                   setIsSubmitting(false);
                   toast.error(
-                     `Payment initiation failed: ${
-                        paymentResult.error || "Unknown error"
-                     }`
+                     `Payment initiation failed: ${paymentResult.error || "Unknown error"}`
                   );
                }
             } catch (err) {
@@ -373,32 +366,6 @@ const CheckoutScreen = ({
       }
    };
 
-   // Show empty cart message
-   if (orderItems.length === 0 && !isRetryMode) {
-      return (
-         <View className="flex-1 items-center justify-center px-4">
-            <ShoppingCart
-               className="text-gray-400 mb-4"
-               size={64}
-            />
-            <Text className="text-2xl font-bold text-gray-900 mb-2 text-center">
-               Your cart is empty
-            </Text>
-            <Text className="text-gray-600 text-center mb-8">
-               Add some items to your cart before checking out
-            </Text>
-            <TouchableOpacity
-               onPress={() => router.push("/")}
-               className="bg-orange-500 px-6 py-3 rounded-lg"
-            >
-               <Text className="text-white font-semibold">
-                  Continue Shopping
-               </Text>
-            </TouchableOpacity>
-         </View>
-      );
-   }
-
    return (
       <ScrollView className="flex-1 bg-gray-50">
          <View className="container mx-auto px-4 py-6">
@@ -409,11 +376,9 @@ const CheckoutScreen = ({
 
             {isRetryMode && (
                <View className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <View className="flex-row items-center">
-                     <Text className="text-blue-900 font-medium">
-                        Retry Payment
-                     </Text>
-                  </View>
+                  <Text className="text-blue-900 font-medium">
+                     Retry Payment
+                  </Text>
                   <Text className="text-blue-700 text-sm mt-1">
                      Previous payment failed. Choose a different payment method
                      below.
@@ -429,7 +394,7 @@ const CheckoutScreen = ({
                         Email
                      </Text>
                      <Text className="text-base text-gray-900">
-                        {customerInfo.email || "Not set"}
+                        {customerEmail || "Not set"}
                      </Text>
                   </View>
                   <View className="flex-row space-x-3">
@@ -438,7 +403,7 @@ const CheckoutScreen = ({
                            First Name
                         </Text>
                         <Text className="text-base text-gray-900">
-                           {customerInfo.firstName || "Not set"}
+                           {customerFirstName || "Not set"}
                         </Text>
                      </View>
                      <View className="flex-1">
@@ -446,7 +411,7 @@ const CheckoutScreen = ({
                            Last Name
                         </Text>
                         <Text className="text-base text-gray-900">
-                           {customerInfo.lastName || "Not set"}
+                           {customerLastName || "Not set"}
                         </Text>
                      </View>
                   </View>
@@ -499,13 +464,8 @@ const CheckoutScreen = ({
                   {instructionsOpen && (
                      <View className="mt-4">
                         <TextInput
-                           value={formData.delivery_notes}
-                           onChangeText={(text) =>
-                              setFormData((prev) => ({
-                                 ...prev,
-                                 delivery_notes: text,
-                              }))
-                           }
+                           value={deliveryNotes}
+                           onChangeText={setDeliveryNotes}
                            placeholder="Any special delivery instructions..."
                            multiline
                            numberOfLines={3}

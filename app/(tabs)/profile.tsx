@@ -7,46 +7,86 @@ import { useAuthStore } from "@/store/auth.store";
 import { Stack } from "expo-router";
 import {
    Bell,
-   Bike,
+   ChevronDown,
+   ChevronRight,
    Languages,
    LogOut,
    Mail,
    MapPin,
    Phone,
    Settings,
+   Shield,
    User,
+   HelpCircle,
+   FileText,
 } from "lucide-react-native";
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
    Alert,
    ScrollView,
-   Switch,
    Text,
    TouchableOpacity,
    View,
+   Animated,
 } from "react-native";
 
+interface CollapsibleSectionProps {
+   title: string;
+   children: React.ReactNode;
+   defaultExpanded?: boolean;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+   title,
+   children,
+   defaultExpanded = false,
+}) => {
+   const [expanded, setExpanded] = useState(defaultExpanded);
+   const [animation] = useState(new Animated.Value(defaultExpanded ? 1 : 0));
+
+   const toggleExpand = () => {
+      const toValue = expanded ? 0 : 1;
+      Animated.spring(animation, {
+         toValue,
+         useNativeDriver: false,
+         tension: 50,
+         friction: 8,
+      }).start();
+      setExpanded(!expanded);
+   };
+
+   const rotateInterpolate = animation.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["0deg", "180deg"],
+   });
+
+   return (
+      <View className="mb-3">
+         <TouchableOpacity
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-sm"
+            onPress={toggleExpand}
+            activeOpacity={0.7}
+         >
+            <Text className="text-lg font-bold text-text">{title}</Text>
+            <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+               <ChevronDown size={24} color={Colors.text} />
+            </Animated.View>
+         </TouchableOpacity>
+         {expanded && (
+            <View className="bg-white rounded-2xl mt-2 overflow-hidden shadow-sm">
+               {children}
+            </View>
+         )}
+      </View>
+   );
+};
+
 export default function ProfileScreen() {
-   const { mode, switchMode, language, changeLanguage } = useApp();
+   const { language, changeLanguage } = useApp();
    const { scheduleLocalNotification } = useNotifications();
    const { t } = useTranslation();
    const { loading: authLoading, user } = useRequireAuth();
-
-   const handleModeSwitch = (value: boolean) => {
-      const newMode = value ? "rider" : "user";
-      Alert.alert(
-         `${t("profile.switchTo")} ${newMode === "rider" ? t("profile.riderMode_short") : t("profile.userMode")} ${t("profile.mode")}?`,
-         `${t("profile.switchMessage")} ${newMode} ${t("profile.panel")}.`,
-         [
-            { text: t("common.cancel"), style: "cancel" },
-            {
-               text: t("common.confirm"),
-               onPress: () => switchMode(newMode),
-            },
-         ]
-      );
-   };
 
    const handleLanguageSwitch = () => {
       Alert.alert(t("profile.language"), t("profile.languageSubtext"), [
@@ -67,7 +107,6 @@ export default function ProfileScreen() {
    const { profile, isLoading: profileLoading } = useProfile();
    const signOut = useAuthStore((s) => s.signOut);
 
-   // Prefer the profile row's full name, fall back to auth user metadata full_name, then email
    const displayName =
       profile?.full_name ??
       user?.user_metadata?.full_name ??
@@ -83,211 +122,222 @@ export default function ProfileScreen() {
             className="flex-1 bg-background"
             showsVerticalScrollIndicator={false}
          >
-            <View className="bg-primary py-8 px-6 items-center rounded-b-3xl">
-               <View className="mb-4">
-                  <View className="w-20 h-20 rounded-full bg-white bg-opacity-20 items-center justify-center border-4 border-white">
-                     <User
-                        size={40}
-                        color={Colors.white}
-                     />
+            {/* Modern Header with Gradient Effect */}
+            <View className="bg-primary pt-12 pb-8 px-6 items-center">
+               <View className="mb-4 relative">
+                  <View className="w-24 h-24 rounded-full bg-white items-center justify-center shadow-lg">
+                     <User size={48} color={Colors.primary} />
+                  </View>
+                  <View className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-secondary items-center justify-center border-2 border-white">
+                     <Settings size={16} color={Colors.white} />
                   </View>
                </View>
                <Text className="text-2xl font-bold text-white mb-1">
                   {displayName}
                </Text>
-               <Text className="text-lg text-white opacity-90">
+               <Text className="text-base text-white opacity-80">
                   {user?.email ?? "john.doe@email.com"}
                </Text>
             </View>
 
-            <View className="p-4">
-               <Text className="text-xl font-bold text-text mb-3">
-                  {t("profile.accountInfo")}
-               </Text>
-
-               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-                     <Phone
-                        size={20}
-                        color={Colors.primary}
-                     />
-                  </View>
-                  <View className="flex-1">
-                     <Text className="text-sm text-textSecondary mb-1">
-                        {t("profile.phoneNumber")}
-                     </Text>
-                     <Text className="text-base text-text font-medium">
-                        {profile?.phone ?? "+91 98765 43210"}
-                     </Text>
-                  </View>
-               </TouchableOpacity>
-
-               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-                     <Mail
-                        size={20}
-                        color={Colors.primary}
-                     />
-                  </View>
-                  <View className="flex-1">
-                     <Text className="text-sm text-textSecondary mb-1">
-                        {t("profile.emailAddress")}
-                     </Text>
-                     <Text className="text-base text-text font-medium">
-                        {user?.email ?? "john.doe@email.com"}
-                     </Text>
-                  </View>
-               </TouchableOpacity>
-
-               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-                     <MapPin
-                        size={20}
-                        color={Colors.primary}
-                     />
-                  </View>
-                  <View className="flex-1">
-                     <Text className="text-sm text-textSecondary mb-1">
-                        {t("profile.defaultAddress")}
-                     </Text>
-                     <Text className="text-base text-text font-medium">
-                        123 Main St, City, State 123456
-                     </Text>
-                  </View>
-               </TouchableOpacity>
-            </View>
-
-            <View className="p-4">
-               <Text className="text-xl font-bold text-text mb-3">
-                  {t("profile.settings")}
-               </Text>
-
-               <View className="bg-white rounded-xl p-4 mb-3 flex-row items-center justify-between shadow-sm">
-                  <View className="flex-row items-center flex-1">
-                     <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-15 items-center justify-center mr-3">
-                        <Bike
-                           size={20}
-                           color={Colors.secondary}
-                        />
+            <View className="p-4 -mt-4">
+               {/* Account Information - Collapsible */}
+               <CollapsibleSection
+                  title={t("profile.accountInfo")}
+                  defaultExpanded={true}
+               >
+                  <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
+                        <Phone size={20} color={Colors.primary} />
                      </View>
-                     <View>
-                        <Text className="text-base font-semibold text-text">
-                           {t("profile.riderMode")}
+                     <View className="flex-1">
+                        <Text className="text-xs text-textSecondary mb-1">
+                           {t("profile.phoneNumber")}
                         </Text>
-                        <Text className="text-sm text-textSecondary mt-1">
-                           {t("profile.riderModeSubtext")}
+                        <Text className="text-base text-text font-medium">
+                           {profile?.phone ?? "+91 98765 43210"}
                         </Text>
                      </View>
-                  </View>
-                  <Switch
-                     value={mode === "rider"}
-                     onValueChange={handleModeSwitch}
-                     trackColor={{ false: Colors.border, true: Colors.primary }}
-                     thumbColor={Colors.white}
-                  />
-               </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
 
+                  <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
+                        <Mail size={20} color={Colors.primary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-xs text-textSecondary mb-1">
+                           {t("profile.emailAddress")}
+                        </Text>
+                        <Text className="text-base text-text font-medium">
+                           {user?.email ?? "john.doe@email.com"}
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity className="p-4 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
+                        <MapPin size={20} color={Colors.primary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-xs text-textSecondary mb-1">
+                           {t("profile.defaultAddress")}
+                        </Text>
+                        <Text className="text-base text-text font-medium">
+                           123 Main St, City, State 123456
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+               </CollapsibleSection>
+
+               {/* Preferences - Collapsible */}
+               <CollapsibleSection title={t("profile.settings")}>
+                  <TouchableOpacity
+                     className="p-4 border-b border-gray-100 flex-row items-center"
+                     onPress={handleLanguageSwitch}
+                  >
+                     <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 items-center justify-center mr-3">
+                        <Languages size={20} color={Colors.secondary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-base text-text font-medium">
+                           {t("profile.language")}
+                        </Text>
+                        <Text className="text-xs text-textSecondary mt-1">
+                           {language === "en" ? "English" : "Ikinyarwanda"}
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                     className="p-4 border-b border-gray-100 flex-row items-center"
+                     onPress={() => {
+                        scheduleLocalNotification(
+                           t("notifications.testTitle"),
+                           t("notifications.testMessage"),
+                           {},
+                           "system"
+                        );
+                        Alert.alert(
+                           t("common.done"),
+                           t("notifications.testSuccess")
+                        );
+                     }}
+                  >
+                     <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 items-center justify-center mr-3">
+                        <Bell size={20} color={Colors.secondary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-base text-text font-medium">
+                           {t("profile.testNotification")}
+                        </Text>
+                        <Text className="text-xs text-textSecondary mt-1">
+                           Test push notifications
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity className="p-4 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 items-center justify-center mr-3">
+                        <Settings size={20} color={Colors.secondary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-base text-text font-medium">
+                           {t("profile.appSettings")}
+                        </Text>
+                        <Text className="text-xs text-textSecondary mt-1">
+                           Advanced settings
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+               </CollapsibleSection>
+
+               {/* Support & Legal - Collapsible */}
+               <CollapsibleSection title="Support & Legal">
+                  <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
+                        <HelpCircle size={20} color={Colors.primary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-base text-text font-medium">
+                           Help Center
+                        </Text>
+                        <Text className="text-xs text-textSecondary mt-1">
+                           Get help and support
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
+                        <Shield size={20} color={Colors.primary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-base text-text font-medium">
+                           Privacy Policy
+                        </Text>
+                        <Text className="text-xs text-textSecondary mt-1">
+                           View our privacy policy
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity className="p-4 flex-row items-center">
+                     <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
+                        <FileText size={20} color={Colors.primary} />
+                     </View>
+                     <View className="flex-1">
+                        <Text className="text-base text-text font-medium">
+                           Terms of Service
+                        </Text>
+                        <Text className="text-xs text-textSecondary mt-1">
+                           Read our terms
+                        </Text>
+                     </View>
+                     <ChevronRight size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+               </CollapsibleSection>
+
+               {/* Logout Button - Standalone */}
                <TouchableOpacity
-                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
-                  onPress={handleLanguageSwitch}
-               >
-                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-                     <Languages
-                        size={20}
-                        color={Colors.primary}
-                     />
-                  </View>
-                  <View className="flex-1">
-                     <Text className="text-base text-text font-medium">
-                        {t("profile.language")}
-                     </Text>
-                     <Text className="text-sm text-textSecondary mt-1">
-                        {language === "en" ? "English" : "Ikinyarwanda"}
-                     </Text>
-                  </View>
-               </TouchableOpacity>
-
-               <TouchableOpacity
-                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
-                  onPress={() => {
-                     scheduleLocalNotification(
-                        t("notifications.testTitle"),
-                        t("notifications.testMessage"),
-                        {},
-                        "system"
-                     );
-                     Alert.alert(
-                        t("common.done"),
-                        t("notifications.testSuccess")
-                     );
-                  }}
-               >
-                  <View className="w-10 h-10 rounded-full bg-primary bg-opacity-15 items-center justify-center mr-3">
-                     <Bell
-                        size={20}
-                        color={Colors.primary}
-                     />
-                  </View>
-                  <Text className="text-base text-text font-medium">
-                     {t("profile.testNotification")}
-                  </Text>
-               </TouchableOpacity>
-
-               <TouchableOpacity className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm">
-                  <View className="w-10 h-10 rounded-full bg-background items-center justify-center mr-3">
-                     <Settings
-                        size={20}
-                        color={Colors.text}
-                     />
-                  </View>
-                  <Text className="text-base text-text font-medium">
-                     {t("profile.appSettings")}
-                  </Text>
-               </TouchableOpacity>
-
-               <TouchableOpacity
-                  className="bg-white rounded-xl p-4 mb-3 flex-row items-center shadow-sm"
+                  className="bg-white rounded-2xl p-4 flex-row items-center shadow-sm mt-2"
                   onPress={async () => {
-                     await signOut();
+                     Alert.alert(
+                        t("profile.logout"),
+                        "Are you sure you want to log out?",
+                        [
+                           { text: t("common.cancel"), style: "cancel" },
+                           {
+                              text: t("profile.logout"),
+                              onPress: async () => await signOut(),
+                              style: "destructive",
+                           },
+                        ]
+                     );
                   }}
                >
-                  <View className="w-10 h-10 rounded-full bg-error bg-opacity-15 items-center justify-center mr-3">
-                     <LogOut
-                        size={20}
-                        color={Colors.error}
-                     />
+                  <View className="w-10 h-10 rounded-full bg-error bg-opacity-10 items-center justify-center mr-3">
+                     <LogOut size={20} color={Colors.error} />
                   </View>
-                  <Text className="text-base text-error font-medium">
+                  <Text className="text-base text-error font-semibold">
                      {t("profile.logout")}
                   </Text>
                </TouchableOpacity>
+
+               <View className="mt-6 mb-8 items-center">
+                  <Text className="text-xs text-textSecondary">
+                     Version 1.0.0
+                  </Text>
+               </View>
             </View>
          </ScrollView>
       </>
    );
 }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: Colors.background },
-//   header: { backgroundColor: Colors.primary, paddingVertical: 32, paddingHorizontal: 24, alignItems: 'center', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-//   avatarContainer: { marginBottom: 16 },
-//   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255, 255, 255, 0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: Colors.white },
-//   name: { fontSize: 24, fontWeight: 'bold', color: Colors.white, marginBottom: 4 },
-//   email: { fontSize: 16, color: Colors.white, opacity: 0.9 },
-//   section: { padding: 16 },
-//   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.text, marginBottom: 12 },
-//   infoCard: { backgroundColor: Colors.white, borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-//   infoIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.primary + '15', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-//   infoContent: { flex: 1 },
-//   infoLabel: { fontSize: 14, color: Colors.textSecondary, marginBottom: 4 },
-//   infoValue: { fontSize: 16, color: Colors.text, fontWeight: '500' },
-//   settingCard: { backgroundColor: Colors.white, borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-//   settingLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-//   settingLabel: { fontSize: 16, color: Colors.text, fontWeight: '600' },
-//   settingSubtext: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
-//   menuItem: { backgroundColor: Colors.white, borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-//   menuIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-//   menuText: { fontSize: 16, color: Colors.text, fontWeight: '500' },
-//   menuContent: { flex: 1 },
-//   menuSubtext: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
-// });
