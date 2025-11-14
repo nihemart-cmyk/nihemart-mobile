@@ -1,12 +1,13 @@
 import Colors from "@/constants/colors";
-import { useApp } from "@/contexts/AppContext";
+import { useOrders } from "@/hooks/useOrders";
 import useRequireAuth from "@/hooks/useRequireAuth";
-import { Order } from "@/types";
+import { Order } from "@/types/orders";
 import { Stack } from "expo-router";
 import {
    CheckCircle,
    Clock,
    Package,
+   RefreshCw,
    Truck,
    XCircle,
 } from "lucide-react-native";
@@ -14,8 +15,11 @@ import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function OrdersScreen() {
-   const { orders } = useApp();
    const { loading: authLoading } = useRequireAuth();
+   const ordersHook = useOrders();
+   const userOrdersQ = ordersHook.useUserOrders();
+
+   const orders = userOrdersQ?.data?.data || [];
 
    if (authLoading) return null;
 
@@ -35,6 +39,13 @@ export default function OrdersScreen() {
                   color={Colors.primary}
                />
             );
+         case "assigned":
+            return (
+               <RefreshCw
+                  size={20}
+                  color={Colors.primary}
+               />
+            );
          case "shipped":
             return (
                <Truck
@@ -49,11 +60,25 @@ export default function OrdersScreen() {
                   color={Colors.success}
                />
             );
+         case "refunded":
+            return (
+               <XCircle
+                  size={20}
+                  color={Colors.error}
+               />
+            );
          case "cancelled":
             return (
                <XCircle
                   size={20}
                   color={Colors.error}
+               />
+            );
+         default:
+            return (
+               <Package
+                  size={20}
+                  color={Colors.primary}
                />
             );
       }
@@ -64,17 +89,21 @@ export default function OrdersScreen() {
          case "pending":
             return Colors.warning;
          case "processing":
+         case "assigned":
          case "shipped":
             return Colors.primary;
          case "delivered":
             return Colors.success;
+         case "refunded":
          case "cancelled":
             return Colors.error;
+         default:
+            return Colors.text;
       }
    };
 
-   const formatDate = (dateString: string) => {
-      const date = new Date(dateString);
+   const formatDate = (dateString: string | undefined | null) => {
+      const date = dateString ? new Date(dateString) : new Date();
       return date.toLocaleDateString("en-US", {
          month: "short",
          day: "numeric",
@@ -82,7 +111,7 @@ export default function OrdersScreen() {
       });
    };
 
-   if (orders.length === 0) {
+   if (!userOrdersQ.isLoading && orders.length === 0) {
       return (
          <>
             <Stack.Screen options={{ title: "My Orders" }} />
@@ -121,7 +150,7 @@ export default function OrdersScreen() {
                               Order #{order.id.slice(-8)}
                            </Text>
                            <Text className="text-sm text-textSecondary mt-1">
-                              {formatDate(order.date)}
+                              {formatDate(order.created_at)}
                            </Text>
                         </View>
                         <View
@@ -140,24 +169,28 @@ export default function OrdersScreen() {
                      <View className="h-px bg-border my-3" />
 
                      <View className="mb-3">
-                        {order.items.slice(0, 2).map((item) => (
-                           <View
-                              key={item.product.id}
-                              className="flex-row justify-between py-1"
-                           >
-                              <Text className="text-sm text-text flex-1">
-                                 {item.product.name}
+                        {Array.isArray(order.items ? order.items : []) &&
+                           (order.items || [])
+                              .slice(0, 2)
+                              .map((item: any, idx: number) => (
+                                 <View
+                                    key={`${order.id}-item-${idx}`}
+                                    className="flex-row justify-between py-1"
+                                 >
+                                    <Text className="text-sm text-text flex-1">
+                                       {item.product_name || item.product?.name}
+                                    </Text>
+                                    <Text className="text-sm text-textSecondary ml-2">
+                                       x{item.quantity}
+                                    </Text>
+                                 </View>
+                              ))}
+                        {Array.isArray(order.items) &&
+                           order.items.length > 2 && (
+                              <Text className="text-sm text-primary mt-1">
+                                 +{order.items.length - 2} more items
                               </Text>
-                              <Text className="text-sm text-textSecondary ml-2">
-                                 x{item.quantity}
-                              </Text>
-                           </View>
-                        ))}
-                        {order.items.length > 2 && (
-                           <Text className="text-sm text-primary mt-1">
-                              +{order.items.length - 2} more items
-                           </Text>
-                        )}
+                           )}
                      </View>
 
                      <View className="flex-row justify-between items-center pt-3 border-t border-border">
@@ -165,7 +198,7 @@ export default function OrdersScreen() {
                            Total Amount
                         </Text>
                         <Text className="text-xl font-bold text-primary">
-                           ₹{order.total}
+                           RWF {Number(order.total || 0).toLocaleString()}
                         </Text>
                      </View>
 

@@ -5,15 +5,16 @@ import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthProvider";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import "@/locales/i18n";
+import { useAuthStore } from "@/store/auth.store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ExpoSplashScreen from "expo-splash-screen";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
 import "../globals.css";
-import React from "react";
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -23,6 +24,7 @@ function RootLayoutNav() {
    const router = useRouter();
    const segments = useSegments();
    const [hasCheckedLanguage, setHasCheckedLanguage] = useState(false);
+   const authLoading = useAuthStore((s) => s.loading);
 
    useEffect(() => {
       const checkLanguageSelection = async () => {
@@ -44,7 +46,11 @@ function RootLayoutNav() {
       checkLanguageSelection();
    }, []);
 
-   if (!hasCheckedLanguage) {
+   // Wait for both language check and auth initialization. If auth is still
+   // loading we may not yet know the user's roles, which determine whether
+   // they should be routed into the rider flow. Returning null prevents a
+   // premature redirect.
+   if (!hasCheckedLanguage || authLoading) {
       return null;
    }
 
@@ -152,6 +158,7 @@ export default function RootLayout() {
                   <NotificationProvider>
                      <RootLayoutNav />
                      <InAppNotificationBanner />
+                     <Toast />
                   </NotificationProvider>
                </AuthProvider>
             </AppProvider>

@@ -1,25 +1,24 @@
 import Colors from "@/constants/colors";
-import { useAuthStore } from "@/store/auth.store";
 import { Stack, useRouter } from "expo-router";
+import {
+   CheckCircle,
+   ChevronLeft,
+   Clock,
+   Filter,
+   MapPin,
+   Package,
+   Search,
+   XCircle,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
+   RefreshControl,
    ScrollView,
    Text,
-   View,
-   TouchableOpacity,
    TextInput,
-   RefreshControl,
+   TouchableOpacity,
+   View,
 } from "react-native";
-import {
-   Search,
-   Filter,
-   Package,
-   MapPin,
-   Clock,
-   CheckCircle,
-   XCircle,
-   ChevronLeft,
-} from "lucide-react-native";
 
 // Mock data
 const mockOrders = [
@@ -68,7 +67,7 @@ const mockOrders = [
 type OrderStatus = "assigned" | "accepted" | "completed" | "rejected";
 
 interface OrderCardProps {
-   order: typeof mockOrders[0];
+   order: (typeof mockOrders)[0];
    onAccept: (id: string) => void;
    onReject: (id: string) => void;
    onComplete: (id: string) => void;
@@ -118,7 +117,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                <View className="w-10 h-10 bg-orange-100 rounded-lg items-center justify-center mr-3">
                   <Package
                      size={20}
-                     color={Colors.primary}
+                     color={Colors.secondary}
                   />
                </View>
                <View>
@@ -130,7 +129,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
                   </Text>
                </View>
             </View>
-            <View className={`px-3 py-1 rounded-full ${getStatusColor(order.status as OrderStatus)}`}>
+            <View
+               className={`px-3 py-1 rounded-full ${getStatusColor(order.status as OrderStatus)}`}
+            >
                <Text className="text-xs font-medium">
                   {getStatusText(order.status as OrderStatus)}
                </Text>
@@ -157,12 +158,12 @@ const OrderCard: React.FC<OrderCardProps> = ({
                />
                <Text className="text-gray-500 text-xs ml-1">{order.time}</Text>
             </View>
-            
+
             <View className="flex-row items-center">
                <Text className="font-bold text-gray-900 mr-3">
                   RWF {order.amount}
                </Text>
-               
+
                {order.status === "assigned" && (
                   <View className="flex-row">
                      <TouchableOpacity
@@ -185,11 +186,11 @@ const OrderCard: React.FC<OrderCardProps> = ({
                      </TouchableOpacity>
                   </View>
                )}
-               
+
                {order.status === "accepted" && (
                   <TouchableOpacity
                      onPress={() => onComplete(order.id)}
-                     className="bg-primary rounded-lg px-4 py-2 flex-row items-center"
+                     className="bg-secondary rounded-lg px-4 py-2 flex-row items-center"
                   >
                      <CheckCircle
                         size={16}
@@ -220,29 +221,37 @@ export default function RiderOrders() {
    };
 
    const filteredOrders = orders.filter((order) => {
-      const matchesSearch = order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          order.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          order.customer.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = activeFilter === "all" || order.status === activeFilter;
+      const matchesSearch =
+         order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         order.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         order.customer.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter =
+         activeFilter === "all" || order.status === activeFilter;
       return matchesSearch && matchesFilter;
    });
 
    const handleAccept = (id: string) => {
-      setOrders(orders.map(order => 
-         order.id === id ? { ...order, status: "accepted" } : order
-      ));
+      setOrders(
+         orders.map((order) =>
+            order.id === id ? { ...order, status: "accepted" } : order
+         )
+      );
    };
 
    const handleReject = (id: string) => {
-      setOrders(orders.map(order => 
-         order.id === id ? { ...order, status: "rejected" } : order
-      ));
+      setOrders(
+         orders.map((order) =>
+            order.id === id ? { ...order, status: "rejected" } : order
+         )
+      );
    };
 
    const handleComplete = (id: string) => {
-      setOrders(orders.map(order => 
-         order.id === id ? { ...order, status: "completed" } : order
-      ));
+      setOrders(
+         orders.map((order) =>
+            order.id === id ? { ...order, status: "completed" } : order
+         )
+      );
    };
 
    const filterOptions: { value: OrderStatus | "all"; label: string }[] = [
@@ -254,8 +263,8 @@ export default function RiderOrders() {
 
    return (
       <>
-         <Stack.Screen 
-            options={{ 
+         <Stack.Screen
+            options={{
                headerShown: true,
                title: "My Orders",
                headerLeft: () => (
@@ -270,12 +279,12 @@ export default function RiderOrders() {
                   </TouchableOpacity>
                ),
                headerStyle: {
-                  backgroundColor: Colors.primary,
+                  backgroundColor: Colors.secondary,
                },
                headerTintColor: "#fff",
-            }} 
+            }}
          />
-         
+
          <View className="flex-1 bg-gray-50">
             {/* Search and Filter */}
             <View className="p-4 bg-white border-b border-gray-200">
@@ -300,7 +309,7 @@ export default function RiderOrders() {
                      />
                   </TouchableOpacity>
                </View>
-               
+
                {/* Filter Chips */}
                <ScrollView
                   horizontal
@@ -338,7 +347,7 @@ export default function RiderOrders() {
                   <RefreshControl
                      refreshing={refreshing}
                      onRefresh={onRefresh}
-                     tintColor={Colors.primary}
+                     tintColor={Colors.secondary}
                   />
                }
             >

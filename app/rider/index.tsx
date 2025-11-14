@@ -122,7 +122,7 @@ const DeliveryCard: React.FC<DeliveryCardProps> = ({
             <View className="w-8 h-8 bg-orange-100 rounded-lg items-center justify-center mr-3">
                <Package
                   size={16}
-                  color={Colors.primary}
+                  color={Colors.secondary}
                />
             </View>
             <Text className="font-bold text-gray-900">{orderNumber}</Text>
@@ -173,7 +173,7 @@ export default function RiderDashboard() {
             options={{
                headerShown: true,
                title: "Dashboard",
-               headerStyle: { backgroundColor: Colors.primary },
+               headerStyle: { backgroundColor: Colors.secondary },
                headerTintColor: "#fff",
             }}
          />
@@ -184,7 +184,7 @@ export default function RiderDashboard() {
                <RefreshControl
                   refreshing={refreshing}
                   onRefresh={onRefresh}
-                  tintColor={Colors.primary}
+                  tintColor={Colors.secondary}
                />
             }
          >
@@ -326,12 +326,12 @@ export default function RiderDashboard() {
                         onPress={() => router.push("/rider/orders")}
                         className="flex-row items-center"
                      >
-                        <Text className="text-primary text-sm font-medium mr-1">
+                        <Text className="text-secondary text-sm font-medium mr-1">
                            View All
                         </Text>
                         <ChevronRight
                            size={16}
-                           color={Colors.primary}
+                           color={Colors.secondary}
                         />
                      </TouchableOpacity>
                   </View>
