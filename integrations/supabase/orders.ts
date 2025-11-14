@@ -795,7 +795,14 @@ async function createNotification(params: {
          } catch (e) {
             // ignore any errors constructing key
          }
-         await fetch("/api/notifications/create", {
+         const apiUrl =
+            process.env.EXPO_PUBLIC_API_URL ||
+            process.env.EXPO_PUBLIC_SITE_URL ||
+            "";
+         const endpoint = apiUrl
+            ? `${apiUrl}/api/notifications/create`
+            : "/api/notifications/create";
+         await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1455,9 +1462,16 @@ export async function createOrder({
                   p_meta: JSON.stringify(metaObj),
                });
             } else {
-               // Browser: call our server-side API which inserts using the service role key
+               // Browser/Mobile: call our server-side API which inserts using the service role key
                try {
-                  await fetch("/api/notifications/create", {
+                  const apiUrl =
+                     process.env.EXPO_PUBLIC_API_URL ||
+                     process.env.EXPO_PUBLIC_SITE_URL ||
+                     "";
+                  const endpoint = apiUrl
+                     ? `${apiUrl}/api/notifications/create`
+                     : "/api/notifications/create";
+                  await fetch(endpoint, {
                      method: "POST",
                      headers: { "Content-Type": "application/json" },
                      body: JSON.stringify({
@@ -1490,7 +1504,14 @@ export async function createOrder({
                   });
                } else {
                   try {
-                     await fetch("/api/notifications/create", {
+                     const apiUrl =
+                        process.env.EXPO_PUBLIC_API_URL ||
+                        process.env.EXPO_PUBLIC_SITE_URL ||
+                        "";
+                     const endpoint = apiUrl
+                        ? `${apiUrl}/api/notifications/create`
+                        : "/api/notifications/create";
+                     await fetch(endpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -1531,8 +1552,15 @@ export async function createOrder({
                         }
                      );
                   } else {
-                     // Browser: call API route
-                     await fetch("/api/orders/send-confirmation-email", {
+                     // Browser/Mobile: call API route with full URL if in mobile
+                     const apiUrl =
+                        process.env.EXPO_PUBLIC_API_URL ||
+                        process.env.EXPO_PUBLIC_SITE_URL ||
+                        "";
+                     const endpoint = apiUrl
+                        ? `${apiUrl}/api/orders/send-confirmation-email`
+                        : "/api/orders/send-confirmation-email";
+                     await fetch(endpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ order: quickOrder }),
@@ -1681,7 +1709,14 @@ export async function updateOrderStatus(
                   });
                } else {
                   try {
-                     await fetch("/api/notifications/create", {
+                     const apiUrl =
+                        process.env.EXPO_PUBLIC_API_URL ||
+                        process.env.EXPO_PUBLIC_SITE_URL ||
+                        "";
+                     const endpoint = apiUrl
+                        ? `${apiUrl}/api/notifications/create`
+                        : "/api/notifications/create";
+                     await fetch(endpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -1714,7 +1749,14 @@ export async function updateOrderStatus(
                });
             } else {
                try {
-                  await fetch("/api/notifications/create", {
+                  const apiUrl =
+                     process.env.EXPO_PUBLIC_API_URL ||
+                     process.env.EXPO_PUBLIC_SITE_URL ||
+                     "";
+                  const endpoint = apiUrl
+                     ? `${apiUrl}/api/notifications/create`
+                     : "/api/notifications/create";
+                  await fetch(endpoint, {
                      method: "POST",
                      headers: { "Content-Type": "application/json" },
                      body: JSON.stringify({

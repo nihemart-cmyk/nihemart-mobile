@@ -12,9 +12,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
    useEffect(() => {
       const handleInitialization = async () => {
          try {
+            console.log("[AuthProvider] Starting initialization...");
             await initialize();
+            const { user } = useAuthStore.getState();
+            console.log(
+               "[AuthProvider] Initialization complete. User:",
+               user?.email ?? "(none)"
+            );
          } catch (e) {
-            console.warn("Auth initialization failed:", e);
+            console.warn("[AuthProvider] Auth initialization failed:", e);
          }
       };
 
@@ -34,6 +40,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const { data } = supabase.auth.onAuthStateChange(
          async (event, session) => {
+            console.log(
+               "[AuthProvider] Auth state changed:",
+               event,
+               "User:",
+               session?.user?.email ?? "(none)"
+            );
             setSession(session as any);
             setUser((session as any)?.user ?? null);
 
@@ -41,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                try {
                   await fetchRoles((session as any).user.id);
                } catch (e) {
-                  console.warn("Role fetch failed:", e);
+                  console.warn("[AuthProvider] Role fetch failed:", e);
                }
 
                // Sync app mode to rider if the fetched roles include rider.
@@ -72,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
          try {
             data.subscription?.unsubscribe();
          } catch (e) {
-            console.warn("Subscription cleanup error:", e);
+            console.warn("[AuthProvider] Subscription cleanup error:", e);
          }
       };
    }, [initialize, setUser, setSession, fetchRoles, setRoles]);

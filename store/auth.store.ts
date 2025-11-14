@@ -123,23 +123,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    },
    signIn: async (email, password) => {
       try {
+         console.log("[AuthStore.signIn] Starting sign-in for", email);
          const { error, data } = await supabase.auth.signInWithPassword({
             email,
             password,
          });
 
          if (error) {
+            console.error("[AuthStore.signIn] Error:", error.message);
             return { error: error.message };
          }
 
+         console.log(
+            "[AuthStore.signIn] Success. Setting user:",
+            data.user?.email
+         );
          if (data.user) {
             // Fetch roles (deduped inside fetchRoles) then update state
             await get().fetchRoles(data.user.id);
             set({ user: data.user, session: data.session });
+            console.log("[AuthStore.signIn] User and session set in store", {
+               user: get().user?.email ?? "(none)",
+            });
          }
 
          return { error: null };
       } catch (error) {
+         console.error("[AuthStore.signIn] Unexpected error:", error);
          return { error: "An unexpected error occurred" };
       }
    },
@@ -178,6 +188,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    hasRole: (role) => get().roles.has(role),
    initialize: async () => {
       try {
+         console.log("[AuthStore] initialize() called");
          set({ loading: true });
 
          // Get current session
@@ -185,18 +196,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             data: { session },
          } = await supabase.auth.getSession();
 
+         console.log(
+            "[AuthStore] Got session from supabase.auth.getSession():",
+            {
+               hasSession: !!session,
+               userEmail: session?.user?.email ?? "(none)",
+            }
+         );
+
          if (session?.user) {
+            console.log(
+               "[AuthStore] Session exists, setting user and fetching roles"
+            );
             // Set basic session/user first
             set({ user: session.user, session });
             // Fetch roles (this is guarded and will be a no-op if another fetch is in-flight)
             await get().fetchRoles(session.user.id);
+            console.log("[AuthStore] Roles fetched for user", session.user.id);
          } else {
+            console.log("[AuthStore] No session found, clearing user");
             set({ user: null, session: null, roles: new Set() });
          }
 
          set({ loading: false });
+         console.log(
+            "[AuthStore] initialize() complete. Final user state:",
+            get().user?.email ?? "(none)"
+         );
       } catch (error) {
-         console.error("Error initializing auth:", error);
+         console.error("[AuthStore] Error initializing auth:", error);
          set({ loading: false });
       }
    },

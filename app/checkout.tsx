@@ -1,5 +1,6 @@
 import { useApp } from "@/contexts/AppContext";
 import { useOrders } from "@/hooks/useOrders";
+import useProfile from "@/hooks/useProfile";
 import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -12,16 +13,21 @@ import {
    View,
 } from "react-native";
 
+import { AddressSelector } from "@/components/ui/AddressSelector";
+import PaymentMethodSelector from "@/components/ui/PaymentMethodSelector";
+import { useAddresses } from "@/hooks/useAddresses";
+import { useKPayPayment } from "@/hooks/useKPayPayment";
+import { PAYMENT_METHODS } from "@/lib/services/kpay";
+import { Address } from "@/types/addresses";
 import toast from "@/utils/toast";
 import {
    CheckCircle2,
    ChevronDown,
    ChevronUp,
-   CreditCard,
-   MapPin,
    Package,
    ShoppingCart,
 } from "lucide-react-native";
+import { Linking } from "react-native";
 
 interface CartItem {
    id: string;
@@ -45,14 +51,12 @@ const CheckoutScreen = ({
    const isLoggedIn = Boolean(user);
    const { cart: cartItems, clearCart } = useApp();
    const { createOrder } = useOrders();
+   const { addresses, selected: defaultAddress } = useAddresses();
+
+   // Selected address for delivery
+   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
    const [formData, setFormData] = useState({
-      email: "",
-      firstName: "",
-      lastName: "",
-      address: "",
-      city: "",
-      phone: "",
       delivery_notes: "",
    });
 
@@ -61,35 +65,25 @@ const CheckoutScreen = ({
    const [isSubmitting, setIsSubmitting] = useState(false);
 
    // Section states
-   const [addressOpen, setAddressOpen] = useState(false);
-   const [addNewOpen, setAddNewOpen] = useState(false);
    const [instructionsOpen, setInstructionsOpen] = useState(false);
-   const [paymentOpen, setPaymentOpen] = useState(false);
 
    // Payment - default to Cash on Delivery for now
    const [paymentMethod, setPaymentMethod] = useState<
-      "cash_on_delivery" | "mtn_momo" | "airtel_money" | ""
+      keyof typeof PAYMENT_METHODS | "cash_on_delivery" | ""
    >("cash_on_delivery");
-   const [mobileMoneyPhones, setMobileMoneyPhones] = useState({
-      mtn_momo: "",
-      airtel_money: "",
-   });
+   const [mobileMoneyPhones, setMobileMoneyPhones] = useState<{
+      mtn_momo?: string;
+      airtel_money?: string;
+   }>({});
+   const [paymentInProgress, setPaymentInProgress] = useState(false);
 
-   // Location data
-   const [provinces, setProvinces] = useState<any[]>([]);
-   const [districts, setDistricts] = useState<any[]>([]);
-   const [sectors, setSectors] = useState<any[]>([]);
-
-   const [selectedProvince, setSelectedProvince] = useState<string | null>(
-      null
-   );
-   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(
-      null
-   );
-   const [selectedSector, setSelectedSector] = useState<string | null>(null);
-
-   const [houseNumber, setHouseNumber] = useState("");
-   const [phoneInput, setPhoneInput] = useState("");
+   // KPay payment functionality
+   const {
+      initiatePayment,
+      formatPhoneNumber,
+      validatePaymentRequest,
+      isInitiating,
+   } = useKPayPayment();
 
    // Calculate totals
    const subtotal = orderItems.reduce(
@@ -101,14 +95,12 @@ const CheckoutScreen = ({
    const transport = 2000; // Fixed delivery fee for simplicity
    const total = subtotal + transport;
 
-   // Load location data (you'll need to adapt your JSON imports for React Native)
+   // Set default address when addresses are loaded
    useEffect(() => {
-      // You can load your location data here from local JSON files
-      // For now, we'll use empty arrays
-      setProvinces([]);
-      setDistricts([]);
-      setSectors([]);
-   }, []);
+      if (defaultAddress && !selectedAddress) {
+         setSelectedAddress(defaultAddress);
+      }
+   }, [defaultAddress]);
 
    // Sync cart items
    useEffect(() => {
@@ -147,82 +139,58 @@ const CheckoutScreen = ({
       }
    }, [cartItems]);
 
-   // Pre-fill user data
-   useEffect(() => {
-      if (user && !isRetryMode) {
-         setFormData((prev) => ({
-            ...prev,
-            email: user.email || "",
-            firstName: user.user_metadata?.full_name?.split(" ")[0] || "",
-            lastName:
-               user.user_metadata?.full_name?.split(" ").slice(1).join(" ") ||
-               "",
-         }));
-      }
-   }, [user, isRetryMode]);
+   // Prefer profile row (from `profiles` table) for the user's full name
+   // then fall back to auth `user.user_metadata.full_name` and finally
+   // to an empty string. This ensures checkout shows the same name as
+   // the profile page when available.
+   const { profile } = useProfile();
 
-   // Phone formatting
-   const formatPhoneInput = (input: string) => {
-      const cleaned = input.replace(/[^\d+]/g, "");
+   const getCustomerInfo = () => {
+      if (!user && !profile) return { email: "", firstName: "", lastName: "" };
 
-      if (cleaned.startsWith("+250")) {
-         const digits = cleaned.slice(4);
-         if (digits.length <= 3) return `+250 ${digits}`;
-         if (digits.length <= 6)
-            return `+250 ${digits.slice(0, 3)} ${digits.slice(3)}`;
-         return `+250 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)}`;
-      }
+      const fullName =
+         profile?.full_name ?? user?.user_metadata?.full_name ?? "";
+      const nameParts = fullName.split(" ").filter(Boolean);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
 
-      if (cleaned.startsWith("07")) {
-         const digits = cleaned;
-         if (digits.length <= 3) return digits;
-         if (digits.length <= 6)
-            return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-         return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
-      }
-
-      return cleaned;
+      return {
+         email: user?.email || "",
+         firstName,
+         lastName,
+      };
    };
 
-   const handlePhoneChange = (text: string) => {
-      const formatted = formatPhoneInput(text);
-
-      if (formatted.startsWith("+250")) {
-         if (formatted.replace(/[^\d]/g, "").length <= 12) {
-            setPhoneInput(formatted);
-         }
-      } else if (formatted.startsWith("07")) {
-         if (formatted.replace(/[^\d]/g, "").length <= 10) {
-            setPhoneInput(formatted);
-         }
-      } else {
-         if (text.length <= 15) {
-            setPhoneInput(formatted);
-         }
-      }
-
-      if (errors?.phone) {
-         setErrors((prev: any) => ({ ...prev, phone: undefined }));
-      }
-   };
+   const customerInfo = getCustomerInfo();
 
    const validateForm = () => {
       const formErrors: any = {};
       const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
 
-      if (!formData.email.trim() || !emailPattern.test(formData.email)) {
-         formErrors.email = "Please enter a valid email";
+      if (!customerInfo.email || !emailPattern.test(customerInfo.email)) {
+         formErrors.email = "Please ensure your email is valid";
       }
 
-      if (!formData.address.trim()) {
-         formErrors.address = "Delivery address is required";
+      if (!selectedAddress) {
+         formErrors.address = "Please select a delivery address";
       }
 
-      if (!phoneInput.trim()) {
-         formErrors.phone = "Phone number is required";
+      // Phone is optional if address has one, otherwise validate
+      if (!selectedAddress?.phone) {
+         formErrors.phone = "Please ensure your address has a phone number";
       }
 
       return formErrors;
+   };
+
+   // Get address display text
+   const getAddressDisplayText = (address: Address) => {
+      const parts = [
+         address.house_number,
+         address.street || address.street_address,
+         address.city,
+      ].filter(Boolean);
+      return parts.length > 0 ? parts.join(", ") : address.display_name || "";
    };
 
    const handleCreateOrder = async () => {
@@ -249,19 +217,27 @@ const CheckoutScreen = ({
       setIsSubmitting(true);
       setErrors({});
 
+      if (!selectedAddress) {
+         toast.error("Please select a delivery address");
+         return;
+      }
+
       try {
+         const deliveryAddress = getAddressDisplayText(selectedAddress);
+         const deliveryCity = selectedAddress.city || "";
+
          const orderData = {
             order: {
                user_id: user!.id,
                subtotal: subtotal,
                tax: transport,
                total: total,
-               customer_email: formData.email.trim(),
-               customer_first_name: formData.firstName.trim(),
-               customer_last_name: formData.lastName.trim(),
-               customer_phone: phoneInput.trim(),
-               delivery_address: formData.address.trim(),
-               delivery_city: formData.city.trim(),
+               customer_email: customerInfo.email.trim(),
+               customer_first_name: customerInfo.firstName.trim(),
+               customer_last_name: customerInfo.lastName.trim(),
+               customer_phone: selectedAddress.phone || "",
+               delivery_address: deliveryAddress,
+               delivery_city: deliveryCity,
                status: "pending" as const,
                payment_method: paymentMethod || "cash_on_delivery",
                delivery_notes: formData.delivery_notes.trim() || undefined,
@@ -278,7 +254,7 @@ const CheckoutScreen = ({
             })),
          };
 
-         // For cash on delivery
+         // For cash on delivery - create order immediately
          if (paymentMethod === "cash_on_delivery" || !paymentMethod) {
             createOrder.mutate(orderData, {
                onSuccess: (createdOrder: any) => {
@@ -287,7 +263,6 @@ const CheckoutScreen = ({
                   toast.success(
                      `Order #${createdOrder.order_number} created successfully!`
                   );
-                  // Redirect user to orders list (order detail page not implemented)
                   router.push("/orders");
                },
                onError: (error: any) => {
@@ -300,10 +275,94 @@ const CheckoutScreen = ({
                },
             });
          } else {
-            // Handle mobile money payments
-            // You'll need to implement your payment gateway integration here
-            toast.error("Mobile money payment integration not implemented");
-            setIsSubmitting(false);
+            // For other payment methods - initiate payment first
+            try {
+               setPaymentInProgress(true);
+
+               const customerPhone =
+                  paymentMethod === "mtn_momo" ||
+                  paymentMethod === "airtel_money"
+                     ? mobileMoneyPhones[paymentMethod] ||
+                       formatPhoneNumber(selectedAddress?.phone || "")
+                     : formatPhoneNumber(selectedAddress?.phone || "");
+
+               const customerFullName =
+                  `${customerInfo.firstName} ${customerInfo.lastName}`.trim();
+
+               const cartSnapshot = orderItems.map((it) => ({
+                  product_id: it.id,
+                  name: it.name,
+                  price: it.price,
+                  quantity: it.quantity,
+                  sku: it.sku,
+                  variation_id: it.variation_id,
+                  variation_name: it.variation_name,
+               }));
+
+               // Get redirect URL for mobile app
+               const apiUrl =
+                  process.env.EXPO_PUBLIC_API_URL ||
+                  process.env.EXPO_PUBLIC_SITE_URL ||
+                  "";
+               const redirectUrl = `${apiUrl}/checkout?payment=success`;
+
+               const paymentRequest = {
+                  amount: total,
+                  customerName: customerFullName,
+                  customerEmail: customerInfo.email,
+                  customerPhone,
+                  paymentMethod: paymentMethod as keyof typeof PAYMENT_METHODS,
+                  redirectUrl,
+                  cart: cartSnapshot,
+               };
+
+               const validationErrors = validatePaymentRequest(paymentRequest);
+               if (validationErrors.length > 0) {
+                  setPaymentInProgress(false);
+                  setIsSubmitting(false);
+                  toast.error(
+                     `Payment validation failed: ${validationErrors[0]}`
+                  );
+                  return;
+               }
+
+               const paymentResult = await initiatePayment(paymentRequest);
+
+               if (paymentResult.success && paymentResult.checkoutUrl) {
+                  toast.success("Redirecting to payment gateway...");
+
+                  // For mobile, open payment URL in external browser
+                  const canOpen = await Linking.canOpenURL(
+                     paymentResult.checkoutUrl
+                  );
+                  if (canOpen) {
+                     await Linking.openURL(paymentResult.checkoutUrl);
+                     // Navigate to payment status page if paymentId is available
+                     if (paymentResult.paymentId) {
+                        router.push(`/payment/${paymentResult.paymentId}`);
+                     }
+                  } else {
+                     toast.error(
+                        "Unable to open payment gateway. Please try again."
+                     );
+                     setPaymentInProgress(false);
+                     setIsSubmitting(false);
+                  }
+               } else {
+                  setPaymentInProgress(false);
+                  setIsSubmitting(false);
+                  toast.error(
+                     `Payment initiation failed: ${
+                        paymentResult.error || "Unknown error"
+                     }`
+                  );
+               }
+            } catch (err) {
+               console.error("Payment initiation failed:", err);
+               setPaymentInProgress(false);
+               setIsSubmitting(false);
+               toast.error("Failed to start payment. Please try again.");
+            }
          }
       } catch (error: any) {
          console.error("Order creation failed:", error);
@@ -363,147 +422,56 @@ const CheckoutScreen = ({
             )}
 
             <View className="space-y-6">
-               {/* Delivery Address Section */}
+               {/* Customer Info Section */}
                <View className="bg-white rounded-lg p-4 shadow-sm">
-                  <TouchableOpacity
-                     onPress={() => setAddressOpen(!addressOpen)}
-                     className="flex-row items-center justify-between"
-                  >
-                     <View className="flex-row items-center space-x-3">
-                        <MapPin
-                           className="text-orange-600"
-                           size={20}
-                        />
-                        <Text className="text-lg font-medium text-gray-900">
-                           Delivery Address
+                  <View className="mb-4">
+                     <Text className="text-sm font-medium text-gray-700 mb-2">
+                        Email
+                     </Text>
+                     <Text className="text-base text-gray-900">
+                        {customerInfo.email || "Not set"}
+                     </Text>
+                  </View>
+                  <View className="flex-row space-x-3">
+                     <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-700 mb-2">
+                           First Name
+                        </Text>
+                        <Text className="text-base text-gray-900">
+                           {customerInfo.firstName || "Not set"}
                         </Text>
                      </View>
-                     {addressOpen ? (
-                        <ChevronUp size={20} />
-                     ) : (
-                        <ChevronDown size={20} />
-                     )}
-                  </TouchableOpacity>
-
-                  {addressOpen && (
-                     <View className="mt-4 space-y-4">
-                        <View>
-                           <Text className="text-sm font-medium text-gray-700 mb-2">
-                              Email *
-                           </Text>
-                           <TextInput
-                              value={formData.email}
-                              onChangeText={(text) =>
-                                 setFormData((prev) => ({
-                                    ...prev,
-                                    email: text,
-                                 }))
-                              }
-                              placeholder="your@email.com"
-                              className={`border rounded-lg px-3 py-2 ${errors.email ? "border-red-500" : "border-gray-300"}`}
-                              keyboardType="email-address"
-                              autoCapitalize="none"
-                           />
-                           {errors.email && (
-                              <Text className="text-red-500 text-xs mt-1">
-                                 {errors.email}
-                              </Text>
-                           )}
-                        </View>
-
-                        <View className="flex-row space-x-3">
-                           <View className="flex-1">
-                              <Text className="text-sm font-medium text-gray-700 mb-2">
-                                 First Name
-                              </Text>
-                              <TextInput
-                                 value={formData.firstName}
-                                 onChangeText={(text) =>
-                                    setFormData((prev) => ({
-                                       ...prev,
-                                       firstName: text,
-                                    }))
-                                 }
-                                 placeholder="First name"
-                                 className="border border-gray-300 rounded-lg px-3 py-2"
-                              />
-                           </View>
-                           <View className="flex-1">
-                              <Text className="text-sm font-medium text-gray-700 mb-2">
-                                 Last Name
-                              </Text>
-                              <TextInput
-                                 value={formData.lastName}
-                                 onChangeText={(text) =>
-                                    setFormData((prev) => ({
-                                       ...prev,
-                                       lastName: text,
-                                    }))
-                                 }
-                                 placeholder="Last name"
-                                 className="border border-gray-300 rounded-lg px-3 py-2"
-                              />
-                           </View>
-                        </View>
-
-                        <View>
-                           <Text className="text-sm font-medium text-gray-700 mb-2">
-                              Address *
-                           </Text>
-                           <TextInput
-                              value={formData.address}
-                              onChangeText={(text) =>
-                                 setFormData((prev) => ({
-                                    ...prev,
-                                    address: text,
-                                 }))
-                              }
-                              placeholder="Street address"
-                              className={`border rounded-lg px-3 py-2 ${errors.address ? "border-red-500" : "border-gray-300"}`}
-                           />
-                           {errors.address && (
-                              <Text className="text-red-500 text-xs mt-1">
-                                 {errors.address}
-                              </Text>
-                           )}
-                        </View>
-
-                        <View>
-                           <Text className="text-sm font-medium text-gray-700 mb-2">
-                              City
-                           </Text>
-                           <TextInput
-                              value={formData.city}
-                              onChangeText={(text) =>
-                                 setFormData((prev) => ({
-                                    ...prev,
-                                    city: text,
-                                 }))
-                              }
-                              placeholder="City"
-                              className="border border-gray-300 rounded-lg px-3 py-2"
-                           />
-                        </View>
-
-                        <View>
-                           <Text className="text-sm font-medium text-gray-700 mb-2">
-                              Phone Number *
-                           </Text>
-                           <TextInput
-                              value={phoneInput}
-                              onChangeText={handlePhoneChange}
-                              placeholder="+250 XXX XXX XXX or 07X XXX XXX"
-                              className={`border rounded-lg px-3 py-2 ${errors.phone ? "border-red-500" : "border-gray-300"}`}
-                              keyboardType="phone-pad"
-                           />
-                           {errors.phone && (
-                              <Text className="text-red-500 text-xs mt-1">
-                                 {errors.phone}
-                              </Text>
-                           )}
-                        </View>
+                     <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-700 mb-2">
+                           Last Name
+                        </Text>
+                        <Text className="text-base text-gray-900">
+                           {customerInfo.lastName || "Not set"}
+                        </Text>
                      </View>
+                  </View>
+                  {errors.email && (
+                     <Text className="text-red-500 text-xs mt-2">
+                        {errors.email}
+                     </Text>
                   )}
+               </View>
+
+               {/* Delivery Address Section */}
+               <View className="bg-white rounded-lg p-4 shadow-sm">
+                  <Text className="text-lg font-medium text-gray-900 mb-4">
+                     Delivery Address
+                  </Text>
+                  {errors.address && (
+                     <Text className="text-red-500 text-xs mb-2">
+                        {errors.address}
+                     </Text>
+                  )}
+                  <AddressSelector
+                     selectedAddress={selectedAddress}
+                     onSelectAddress={setSelectedAddress}
+                     showAddButton={true}
+                  />
                </View>
 
                {/* Delivery Instructions */}
@@ -548,125 +516,18 @@ const CheckoutScreen = ({
                </View>
 
                {/* Payment Method */}
-               <View className="bg-white rounded-lg p-4 shadow-sm">
-                  <TouchableOpacity
-                     onPress={() => setPaymentOpen(!paymentOpen)}
-                     className="flex-row items-center justify-between"
-                  >
-                     <View className="flex-row items-center space-x-3">
-                        <CreditCard
-                           className="text-orange-600"
-                           size={20}
-                        />
-                        <Text className="text-lg font-medium text-gray-900">
-                           Payment Method
-                        </Text>
-                     </View>
-                     {paymentOpen ? (
-                        <ChevronUp size={20} />
-                     ) : (
-                        <ChevronDown size={20} />
-                     )}
-                  </TouchableOpacity>
-
-                  {paymentOpen && (
-                     <View className="mt-4 space-y-3">
-                        <TouchableOpacity
-                           onPress={() => setPaymentMethod("cash_on_delivery")}
-                           className={`flex-row items-center p-3 border rounded-lg ${
-                              paymentMethod === "cash_on_delivery"
-                                 ? "border-orange-500 bg-orange-50"
-                                 : "border-gray-300"
-                           }`}
-                        >
-                           <View
-                              className={`w-5 h-5 rounded-full border-2 mr-3 ${
-                                 paymentMethod === "cash_on_delivery"
-                                    ? "bg-orange-500 border-orange-500"
-                                    : "border-gray-300"
-                              }`}
-                           />
-                           <Text className="font-medium">Cash on Delivery</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                           onPress={() => setPaymentMethod("mtn_momo")}
-                           className={`flex-row items-center p-3 border rounded-lg ${
-                              paymentMethod === "mtn_momo"
-                                 ? "border-orange-500 bg-orange-50"
-                                 : "border-gray-300"
-                           }`}
-                        >
-                           <View
-                              className={`w-5 h-5 rounded-full border-2 mr-3 ${
-                                 paymentMethod === "mtn_momo"
-                                    ? "bg-orange-500 border-orange-500"
-                                    : "border-gray-300"
-                              }`}
-                           />
-                           <Text className="font-medium">MTN Mobile Money</Text>
-                        </TouchableOpacity>
-
-                        {paymentMethod === "mtn_momo" && (
-                           <View className="ml-8">
-                              <Text className="text-sm font-medium text-gray-700 mb-2">
-                                 MTN Phone Number
-                              </Text>
-                              <TextInput
-                                 value={mobileMoneyPhones.mtn_momo}
-                                 onChangeText={(text) =>
-                                    setMobileMoneyPhones((prev) => ({
-                                       ...prev,
-                                       mtn_momo: text,
-                                    }))
-                                 }
-                                 placeholder="07X XXX XXX"
-                                 className="border border-gray-300 rounded-lg px-3 py-2"
-                                 keyboardType="phone-pad"
-                              />
-                           </View>
-                        )}
-
-                        <TouchableOpacity
-                           onPress={() => setPaymentMethod("airtel_money")}
-                           className={`flex-row items-center p-3 border rounded-lg ${
-                              paymentMethod === "airtel_money"
-                                 ? "border-orange-500 bg-orange-50"
-                                 : "border-gray-300"
-                           }`}
-                        >
-                           <View
-                              className={`w-5 h-5 rounded-full border-2 mr-3 ${
-                                 paymentMethod === "airtel_money"
-                                    ? "bg-orange-500 border-orange-500"
-                                    : "border-gray-300"
-                              }`}
-                           />
-                           <Text className="font-medium">Airtel Money</Text>
-                        </TouchableOpacity>
-
-                        {paymentMethod === "airtel_money" && (
-                           <View className="ml-8">
-                              <Text className="text-sm font-medium text-gray-700 mb-2">
-                                 Airtel Phone Number
-                              </Text>
-                              <TextInput
-                                 value={mobileMoneyPhones.airtel_money}
-                                 onChangeText={(text) =>
-                                    setMobileMoneyPhones((prev) => ({
-                                       ...prev,
-                                       airtel_money: text,
-                                    }))
-                                 }
-                                 placeholder="07X XXX XXX"
-                                 className="border border-gray-300 rounded-lg px-3 py-2"
-                                 keyboardType="phone-pad"
-                              />
-                           </View>
-                        )}
-                     </View>
-                  )}
-               </View>
+               <PaymentMethodSelector
+                  selectedMethod={paymentMethod || "cash_on_delivery"}
+                  onMethodChange={(method) => setPaymentMethod(method)}
+                  disabled={isSubmitting || paymentInProgress}
+                  onMobileMoneyPhoneChange={(method, phoneNumber) => {
+                     setMobileMoneyPhones((prev) => ({
+                        ...prev,
+                        [method]: phoneNumber,
+                     }));
+                  }}
+                  mobileMoneyPhones={mobileMoneyPhones}
+               />
 
                {/* Order Summary */}
                <View className="bg-white rounded-lg p-4 shadow-sm">
@@ -746,14 +607,22 @@ const CheckoutScreen = ({
                   {/* Order Button */}
                   <TouchableOpacity
                      onPress={handleCreateOrder}
-                     disabled={isSubmitting || !paymentMethod}
+                     disabled={
+                        isSubmitting ||
+                        !paymentMethod ||
+                        paymentInProgress ||
+                        isInitiating
+                     }
                      className={`mt-6 rounded-lg py-4 flex-row items-center justify-center ${
-                        isSubmitting || !paymentMethod
+                        isSubmitting ||
+                        !paymentMethod ||
+                        paymentInProgress ||
+                        isInitiating
                            ? "bg-gray-400"
                            : "bg-orange-500"
                      }`}
                   >
-                     {isSubmitting ? (
+                     {isSubmitting || paymentInProgress || isInitiating ? (
                         <ActivityIndicator
                            color="white"
                            className="mr-2"
@@ -766,7 +635,11 @@ const CheckoutScreen = ({
                         />
                      )}
                      <Text className="text-white font-semibold text-lg">
-                        {isSubmitting ? "Processing..." : "Place Order"}
+                        {isSubmitting
+                           ? "Processing..."
+                           : paymentInProgress || isInitiating
+                             ? "Starting Payment..."
+                             : "Place Order"}
                      </Text>
                   </TouchableOpacity>
                </View>

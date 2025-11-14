@@ -20,7 +20,15 @@ export function useAddresses() {
    const user = useAuthStore((s) => s.user);
 
    const fetchAddresses = useCallback(async () => {
-      if (!user) return;
+      // If there's no authenticated user, ensure we reset state and
+      // stop the loading indicator instead of returning early and
+      // leaving `loading` true (which caused infinite spinners).
+      if (!user) {
+         setAddresses([]);
+         setSelected(null);
+         setLoading(false);
+         return;
+      }
 
       try {
          setLoading(true);
