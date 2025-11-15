@@ -1,5 +1,7 @@
 import Colors from "@/constants/colors";
 import { useAuthStore } from "@/store/auth.store";
+import * as AuthSession from "expo-auth-session";
+import { supabase } from "@/integrations/supabase/client";
 import { Image } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react-native";
@@ -48,7 +50,54 @@ export default function SignInScreen() {
    };
 
    const handleGoogleSignIn = async () => {
-      // Add Google sign-in logic here
+      setLoading(true);
+      try {
+         // Use Expo AuthSession to open the OAuth flow in the system browser / proxy.
+         // `makeRedirectUri({ useProxy: true })` works for Expo Go / dev. For a
+         // standalone app set a custom scheme in app config and use that instead.
+         const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+
+         const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+               redirectTo: redirectUri,
+               queryParams: {
+                  access_type: "offline",
+                  prompt: "consent",
+               },
+            },
+         });
+
+         if (error) {
+            Alert.alert("Google sign in failed", error.message ?? "");
+            return;
+         }
+
+         const authUrl = data?.url;
+         if (!authUrl) {
+            Alert.alert("Google sign in failed", "No auth url returned");
+            return;
+         }
+
+         // Start the AuthSession; this opens the browser and returns when the
+         // redirect back to the app happens (handled by expo-auth-session).
+         // We don't strictly need the result here because Supabase client will
+         // persist the session (AsyncStorage) on callback, but we trigger a
+         // reinitialization to pick up the session immediately.
+         await AuthSession.startAsync({ authUrl });
+
+         // Refresh local store state from Supabase
+         await useAuthStore.getState().initialize();
+
+         const signedInUser = useAuthStore.getState().user;
+         if (signedInUser) {
+            router.replace("/");
+         }
+      } catch (e: any) {
+         Alert.alert("Sign in error", e?.message ?? String(e));
+      } finally {
+         setLoading(false);
+      }
    };
 
    return (

@@ -4,6 +4,11 @@ import { useAuthStore } from "@/store/auth.store";
 import React, { useEffect } from "react";
 
 // The AuthProvider handles initialization and state sync with Supabase.
+// It ensures:
+// 1. Session is restored from AsyncStorage on app launch
+// 2. Tokens are automatically refreshed when they expire
+// 3. User state is consistent across the entire app
+// 4. Loading state is cleared promptly to avoid unnecessary re-renders/redirects
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
    const { initialize, setUser, setSession, fetchRoles, setRoles, hasRole } =
       useAuthStore();
@@ -24,20 +29,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
          }
       };
 
+      // Run initialization immediately
       void handleInitialization();
 
-      // After initialization, sync app mode with the user's roles (if any).
-      // If the authenticated user has the `rider` role, put the app into
-      // rider mode so the rider layout is used automatically.
-      (async () => {
-         try {
-            const stateHasRider = hasRole && hasRole("rider");
-            if (stateHasRider) switchMode("rider");
-         } catch (e) {
-            // noop
-         }
-      })();
-
+      // Set up the auth state change listener to handle:
+      // 1. Token refresh events
+      // 2. User sign-in/sign-out
+      // 3. Role changes
       const { data } = supabase.auth.onAuthStateChange(
          async (event, session) => {
             console.log(
@@ -46,17 +44,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                "User:",
                session?.user?.email ?? "(none)"
             );
+
+            // Update session and user state in store
             setSession(session as any);
             setUser((session as any)?.user ?? null);
 
             if ((session as any)?.user) {
                try {
+                  // Fetch user roles
                   await fetchRoles((session as any).user.id);
                } catch (e) {
                   console.warn("[AuthProvider] Role fetch failed:", e);
                }
 
-               // Sync app mode to rider if the fetched roles include rider.
+               // Sync app mode based on roles
                try {
                   const isRider = hasRole && hasRole("rider");
                   if (isRider) {
@@ -65,17 +66,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                      switchMode("user");
                   }
                } catch (e) {
-                  // ignore
+                  console.warn("[AuthProvider] Mode switch error:", e);
                }
 
-               // Optional: if you have a backend API to upsert profile rows, call it here.
-               // On mobile there is no relative /api route; use a full API_URL env var if needed.
+               // Log token refresh events for debugging
+               if (event === "TOKEN_REFRESHED") {
+                  console.log("[AuthProvider] Token refreshed successfully");
+               }
             } else {
+               // User signed out
                setRoles(new Set());
-               // Ensure mode returns to user when signed out
                try {
                   switchMode("user");
-               } catch (e) {}
+               } catch (e) {
+                  console.warn(
+                     "[AuthProvider] Mode switch on logout error:",
+                     e
+                  );
+               }
             }
          }
       );
@@ -87,7 +95,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.warn("[AuthProvider] Subscription cleanup error:", e);
          }
       };
-   }, [initialize, setUser, setSession, fetchRoles, setRoles]);
+   }, [
+      initialize,
+      setUser,
+      setSession,
+      fetchRoles,
+      setRoles,
+      hasRole,
+      switchMode,
+   ]);
 
    return <>{children}</>;
 };

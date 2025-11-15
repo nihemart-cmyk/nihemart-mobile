@@ -1,5 +1,7 @@
 import Colors from "@/constants/colors";
 import { useAuthStore } from "@/store/auth.store";
+import * as AuthSession from "expo-auth-session";
+import { supabase } from "@/integrations/supabase/client";
 import { Image } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react-native";
@@ -61,7 +63,46 @@ export default function SignUpScreen() {
    };
 
    const handleGoogleSignUp = async () => {
-      // Add Google sign-up logic here
+      setLoading(true);
+      try {
+         const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+
+         const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+               redirectTo: redirectUri,
+               queryParams: {
+                  access_type: "offline",
+                  prompt: "consent",
+               },
+            },
+         });
+
+         if (error) {
+            Alert.alert("Google sign up failed", error.message ?? "");
+            return;
+         }
+
+         const authUrl = data?.url;
+         if (!authUrl) {
+            Alert.alert("Google sign up failed", "No auth url returned");
+            return;
+         }
+
+         await AuthSession.startAsync({ authUrl });
+
+         // Refresh local store state from Supabase
+         await useAuthStore.getState().initialize();
+
+         const signedInUser = useAuthStore.getState().user;
+         if (signedInUser) {
+            router.replace("/");
+         }
+      } catch (e: any) {
+         Alert.alert("Sign up error", e?.message ?? String(e));
+      } finally {
+         setLoading(false);
+      }
    };
 
    return (

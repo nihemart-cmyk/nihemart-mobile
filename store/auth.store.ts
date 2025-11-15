@@ -36,6 +36,7 @@ type AuthState = {
       phone?: string
    ) => Promise<{ error: string | null }>;
    signOut: () => Promise<void>;
+   requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
    hasRole: (role: AppRole) => boolean;
    initialize: () => Promise<void>;
 };
@@ -155,7 +156,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    },
    signUp: async (fullName, email, password, phone) => {
       try {
-         // On mobile we won't rely on window.location; just sign up normally.
+         // Sign up user first
          const { error, data } = await supabase.auth.signUp({
             email,
             password,
@@ -164,10 +165,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             },
          });
 
-         // Best-effort server-side hooks or email can be triggered by your
-         // server webhook / Postgres trigger. We won't call /api routes here.
+         if (error) {
+            return { error: error.message };
+         }
 
-         return { error: error?.message ?? null };
+         // Send confirmation email via our Next.js API endpoint
+         // This matches the web flow by calling /api/email/send with type=signup
+         try {
+            const emailRes = await fetch(
+               `${process.env.EXPO_PUBLIC_APP_URL || process.env.EXPO_PUBLIC_API_URL || ""}/api/email/send`,
+               {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                     email,
+                     type: "signup",
+                     userId: data?.user?.id,
+                  }),
+               }
+            );
+
+            const emailJson = await emailRes.json().catch(() => null);
+            if (!emailRes.ok) {
+               console.warn("[AuthStore.signUp] Email send failed:", emailJson);
+               // Don't fail signup if email fails, but log it
+            }
+         } catch (emailErr) {
+            console.warn("[AuthStore.signUp] Email send error:", emailErr);
+            // Email errors don't block signup; user is still registered
+         }
+
+         return { error: null };
       } catch (error) {
          return { error: "An unexpected error occurred" };
       }
@@ -185,13 +213,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
          throw error;
       }
    },
+   requestPasswordReset: async (email: string) => {
+      try {
+         // Call the same email API as web, but with type=recovery
+         const emailRes = await fetch(
+            `${process.env.EXPO_PUBLIC_APP_URL || process.env.EXPO_PUBLIC_API_URL || ""}/api/email/send`,
+            {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({
+                  email,
+                  type: "recovery",
+               }),
+            }
+         );
+
+         const emailJson = await emailRes.json().catch(() => null);
+         if (!emailRes.ok) {
+            console.error(
+               "[AuthStore.requestPasswordReset] Email send failed:",
+               emailJson
+            );
+            return {
+               error: emailJson?.error || "Failed to send password reset email",
+            };
+         }
+
+         return { error: null };
+      } catch (error: any) {
+         console.error("[AuthStore.requestPasswordReset] Error:", error);
+         return { error: error?.message || "An unexpected error occurred" };
+      }
+   },
    hasRole: (role) => get().roles.has(role),
    initialize: async () => {
       try {
          console.log("[AuthStore] initialize() called");
-         set({ loading: true });
 
-         // Get current session
+         // Get current session from persisted storage (AsyncStorage on mobile)
+         // This is the first check and won't re-fetch if session exists
          const {
             data: { session },
          } = await supabase.auth.getSession();
@@ -208,23 +268,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             console.log(
                "[AuthStore] Session exists, setting user and fetching roles"
             );
-            // Set basic session/user first
-            set({ user: session.user, session });
-            // Fetch roles (this is guarded and will be a no-op if another fetch is in-flight)
-            await get().fetchRoles(session.user.id);
-            console.log("[AuthStore] Roles fetched for user", session.user.id);
+            // Set basic session/user immediately to unblock UI
+            set({ user: session.user, session, loading: false });
+
+            // Fetch roles in background (doesn't block UI rendering)
+            try {
+               await get().fetchRoles(session.user.id);
+               console.log(
+                  "[AuthStore] Roles fetched for user",
+                  session.user.id
+               );
+            } catch (roleErr) {
+               console.warn("[AuthStore] Role fetch error:", roleErr);
+            }
          } else {
             console.log("[AuthStore] No session found, clearing user");
-            set({ user: null, session: null, roles: new Set() });
+            set({
+               user: null,
+               session: null,
+               roles: new Set(),
+               loading: false,
+            });
          }
-
-         set({ loading: false });
-         console.log(
-            "[AuthStore] initialize() complete. Final user state:",
-            get().user?.email ?? "(none)"
-         );
       } catch (error) {
          console.error("[AuthStore] Error initializing auth:", error);
+         // Always clear loading to unblock UI, even on error
          set({ loading: false });
       }
    },
