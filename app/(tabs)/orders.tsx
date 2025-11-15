@@ -12,12 +12,14 @@ import {
    XCircle,
 } from "lucide-react-native";
 import React from "react";
+import { useRouter } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function OrdersScreen() {
    const { loading: authLoading } = useRequireAuth();
    const ordersHook = useOrders();
    const userOrdersQ = ordersHook.useUserOrders();
+   const router = useRouter();
 
    const orders = userOrdersQ?.data?.data || [];
 
@@ -102,6 +104,55 @@ export default function OrdersScreen() {
       }
    };
 
+   const getRefundStatusIcon = (status: string) => {
+      switch (status) {
+         case "requested":
+            return (
+               <Clock
+                  size={14}
+                  color="#3b82f6"
+               />
+            );
+         case "approved":
+            return (
+               <CheckCircle
+                  size={14}
+                  color={Colors.success}
+               />
+            );
+         case "rejected":
+            return (
+               <XCircle
+                  size={14}
+                  color={Colors.error}
+               />
+            );
+         case "refunded":
+            return (
+               <CheckCircle
+                  size={14}
+                  color={Colors.success}
+               />
+            );
+         default:
+            return null;
+      }
+   };
+
+   const getRefundStatusColor = (status: string) => {
+      switch (status) {
+         case "requested":
+            return "#3b82f6";
+         case "approved":
+         case "refunded":
+            return Colors.success;
+         case "rejected":
+            return Colors.error;
+         default:
+            return Colors.text;
+      }
+   };
+
    const formatDate = (dateString: string | undefined | null) => {
       const date = dateString ? new Date(dateString) : new Date();
       return date.toLocaleDateString("en-US", {
@@ -135,7 +186,7 @@ export default function OrdersScreen() {
       <>
          <Stack.Screen options={{ title: "My Orders" }} />
          <ScrollView
-            className="flex-1 bg-background"
+            className="flex-1 bg-background pb-20"
             showsVerticalScrollIndicator={false}
          >
             <View className="p-4">
@@ -144,27 +195,82 @@ export default function OrdersScreen() {
                      key={order.id}
                      className="bg-white rounded-xl p-4 mb-4 shadow-lg"
                   >
-                     <View className="flex-row justify-between items-start">
-                        <View>
+                     <View className="flex-row justify-between items-start mb-3">
+                        <View className="flex-1">
                            <Text className="text-lg font-bold text-text">
-                              Order #{order.id.slice(-8)}
+                              Order #{order.order_number || order.id.slice(-8)}
                            </Text>
-                           <Text className="text-sm text-textSecondary mt-1">
+                           <Text className="text-xs text-textSecondary mt-1">
                               {formatDate(order.created_at)}
                            </Text>
                         </View>
                         <View
-                           className={`flex-row items-center gap-2 px-3 py-2 rounded-xl ${getStatusColor(order.status)}20`}
+                           className={`flex-row items-center gap-2 px-3 py-2 rounded-lg`}
+                           style={{
+                              backgroundColor:
+                                 getStatusColor(order.status) + "20",
+                           }}
                         >
                            {getStatusIcon(order.status)}
                            <Text
-                              className={`text-sm font-semibold ${getStatusColor(order.status)}`}
+                              className={`text-xs font-semibold`}
+                              style={{ color: getStatusColor(order.status) }}
                            >
                               {order.status.charAt(0).toUpperCase() +
                                  order.status.slice(1)}
                            </Text>
                         </View>
                      </View>
+
+                     {/* Show refund status badge if applicable */}
+                     {(order.refund_status ||
+                        order.items?.some(
+                           (item: any) => item.refund_status
+                        )) && (
+                        <View className="mb-3 flex-row flex-wrap gap-2">
+                           {order.refund_status && (
+                              <View
+                                 className="flex-row items-center gap-1 px-2 py-1 rounded"
+                                 style={{
+                                    backgroundColor:
+                                       getRefundStatusColor(
+                                          order.refund_status
+                                       ) + "20",
+                                 }}
+                              >
+                                 {getRefundStatusIcon(order.refund_status)}
+                                 <Text
+                                    className="text-xs font-medium"
+                                    style={{
+                                       color: getRefundStatusColor(
+                                          order.refund_status
+                                       ),
+                                    }}
+                                 >
+                                    Refund {order.refund_status}
+                                 </Text>
+                              </View>
+                           )}
+                           {order.items?.some(
+                              (item: any) => item.refund_status
+                           ) && (
+                              <View
+                                 className="flex-row items-center gap-1 px-2 py-1 rounded"
+                                 style={{
+                                    backgroundColor: "#ef444420",
+                                 }}
+                              >
+                                 <Clock
+                                    size={12}
+                                    color="#ef4444"
+                                 />
+                                 <Text className="text-xs font-medium text-red-600">
+                                    Item refunds pending
+                                 </Text>
+                              </View>
+                           )}
+                        </View>
+                     )}
 
                      <View className="h-px bg-border my-3" />
 
@@ -202,9 +308,14 @@ export default function OrdersScreen() {
                         </Text>
                      </View>
 
-                     <TouchableOpacity className="bg-primary py-3 rounded-lg items-center mt-3">
+                     <TouchableOpacity
+                        onPress={() =>
+                           router.push(`/orders/${order.id}` as any)
+                        }
+                        className="bg-primary py-3 rounded-lg items-center mt-3"
+                     >
                         <Text className="text-sm font-semibold text-white">
-                           Track Order
+                           View Details
                         </Text>
                      </TouchableOpacity>
                   </View>

@@ -5,7 +5,7 @@ import useRequireAuth from "@/hooks/useRequireAuth";
 import { useRiderOrders } from "@/hooks/useRiderOrders";
 import { useRiderByUserId } from "@/hooks/useRiders";
 import { useAuthStore } from "@/store/auth.store";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import {
    Bell,
    ChevronRight,
@@ -32,6 +32,7 @@ export default function RiderProfileScreen() {
    const { scheduleLocalNotification } = useNotifications();
    const { loading: authLoading } = useRequireAuth();
    const { user, signOut } = useAuthStore();
+   const router = useRouter();
 
    const { data: rider, isLoading: riderLoading } = useRiderByUserId(user?.id);
    const { data: ordersData } = useRiderOrders(rider?.id);
@@ -77,7 +78,7 @@ export default function RiderProfileScreen() {
       <>
          <Stack.Screen options={{ title: "Rider Profile" }} />
          <ScrollView
-            className="flex-1 bg-gray-50"
+            className="flex-1 bg-gray-50 pb-20"
             showsVerticalScrollIndicator={false}
          >
             {/* Header Section with Gradient */}
@@ -244,7 +245,37 @@ export default function RiderProfileScreen() {
 
                {/* Logout */}
                <TouchableOpacity
-                  onPress={() => signOut()}
+                  onPress={() =>
+                     Alert.alert(
+                        "Logout",
+                        "Are you sure you want to log out?",
+                        [
+                           { text: "Cancel", style: "cancel" },
+                           {
+                              text: "Logout",
+                              style: "destructive",
+                              onPress: async () => {
+                                 try {
+                                    await signOut();
+                                    try {
+                                       router.replace("/signin" as any);
+                                    } catch (navErr) {
+                                       console.warn(
+                                          "Router replace failed:",
+                                          navErr
+                                       );
+                                    }
+                                 } catch (err: any) {
+                                    Alert.alert(
+                                       "Error",
+                                       err?.message || "Failed to sign out"
+                                    );
+                                 }
+                              },
+                           },
+                        ]
+                     )
+                  }
                   className="bg-white rounded-3xl p-5 flex-row items-center justify-between shadow-sm border border-red-100 mb-8"
                >
                   <View className="flex-row items-center flex-1">

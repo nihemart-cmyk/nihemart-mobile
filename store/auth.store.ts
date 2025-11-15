@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearSessionCache } from "@/lib/auth/session-recovery";
 import type { Session, User } from "@supabase/supabase-js";
 import { create } from "zustand";
 
@@ -202,12 +203,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    },
    signOut: async () => {
       try {
+         console.log("[AuthStore.signOut] Initiating sign out...");
          await supabase.auth.signOut();
          set({ user: null, session: null, roles: new Set() });
+         console.log("[AuthStore.signOut] Cleared auth state in store");
          // Clear any auth-related local storage keys used by supabase-js
          try {
+            // Clear specific known key and also run broader cache cleanup
             await AsyncStorage.removeItem("sb-access-token");
          } catch {}
+
+         try {
+            await clearSessionCache();
+         } catch (e) {
+            console.warn("Failed to clear session cache on signOut:", e);
+         }
       } catch (error) {
          console.error("Error signing out:", error);
          throw error;

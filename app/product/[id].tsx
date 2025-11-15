@@ -1,164 +1,232 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Star, ShoppingCart, Heart, Truck } from 'lucide-react-native';
-import { useProduct } from '@/hooks/useProduct';
-import { useApp } from '@/contexts/AppContext';
-import Colors from '@/constants/colors';
-import { useState } from 'react';
+import React from "react";
+import {
+   View,
+   Text,
+   ScrollView,
+   TouchableOpacity,
+   Dimensions,
+   Alert,
+   ActivityIndicator,
+} from "react-native";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Star, ShoppingCart, Heart, Truck } from "lucide-react-native";
+import { useProduct } from "@/hooks/useProduct";
+import { useApp } from "@/contexts/AppContext";
+import Colors from "@/constants/colors";
+import { useState } from "react";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function ProductDetailScreen() {
-  const { id } = useLocalSearchParams();
-  const router = useRouter();
-  const { addToCart } = useApp();
-  const [quantity, setQuantity] = useState<number>(1);
+   const { id } = useLocalSearchParams();
+   const router = useRouter();
+   const { addToCart } = useApp();
+   const [quantity, setQuantity] = useState<number>(1);
 
-  const { data: product, isLoading } = useProduct(id as string);
+   const { data: product, isLoading } = useProduct(id as string);
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
+   if (isLoading) {
+      return (
+         <View className="flex-1 bg-background items-center justify-center">
+            <ActivityIndicator
+               size="large"
+               color={Colors.primary}
+            />
+         </View>
+      );
+   }
 
-  if (!product) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <Text className="text-lg text-textSecondary">Product not found</Text>
-      </View>
-    );
-  }
-
-  const handleAddToCart = () => {
-    addToCart(product as any, quantity);
-    Alert.alert(
-      'Added to Cart',
-      `${product.name} has been added to your cart.`,
-      [
-        { text: 'Continue Shopping', style: 'cancel' },
-        { text: 'View Cart', onPress: () => router.push('/(tabs)/cart' as any) }
-      ]
-    );
-  };
-
-  const isInStock = product.stock > 0 && product.status === 'active';
-  const discount = product.compare_at_price && product.compare_at_price > product.price
-    ? Math.round((1 - product.price / product.compare_at_price) * 100)
-    : 0;
-
-  return (
-    <View className="flex-1 bg-background">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <Image
-          source={{ uri: product.main_image_url || 'https://via.placeholder.com/400' }}
-          className="w-full"
-          style={{ height: width }}
-          contentFit="cover"
-        />
-
-        {discount > 0 && (
-          <View className="absolute top-4 right-4 bg-secondary px-3 py-2 rounded-lg">
-            <Text className="text-white text-base font-bold">{discount}% OFF</Text>
-          </View>
-        )}
-
-        <View className="p-4">
-          <View className="flex-row justify-between items-start mb-3">
-            <View className="flex-1">
-              {product.brand && (
-                <Text className="text-primary text-base font-semibold mb-1">{product.brand}</Text>
-              )}
-            </View>
-            <TouchableOpacity className="w-11 h-11 rounded-full bg-background items-center justify-center border border-border">
-              <Heart size={24} color={Colors.error} />
-            </TouchableOpacity>
-          </View>
-
-          <Text className="text-2xl font-bold text-text mb-4">{product.name}</Text>
-
-          <View className="flex-row items-center space-x-3 mb-4">
-            <Text className="text-2xl font-bold text-primary">
-              FRW {product.price}
+   if (!product) {
+      return (
+         <View className="flex-1 bg-background items-center justify-center">
+            <Text className="text-lg text-textSecondary">
+               Product not found
             </Text>
-            {product.compare_at_price && product.compare_at_price > product.price && (
-              <Text className="text-xl text-textSecondary line-through">
-                FRW {product.compare_at_price}
-              </Text>
+         </View>
+      );
+   }
+
+   const handleAddToCart = () => {
+      addToCart(product as any, quantity);
+      Alert.alert(
+         "Added to Cart",
+         `${product.name} has been added to your cart.`,
+         [
+            { text: "Continue Shopping", style: "cancel" },
+            {
+               text: "View Cart",
+               onPress: () => router.push("/(tabs)/cart" as any),
+            },
+         ]
+      );
+   };
+
+   const isInStock = product.stock > 0 && product.status === "active";
+   const discount =
+      product.compare_at_price && product.compare_at_price > product.price
+         ? Math.round((1 - product.price / product.compare_at_price) * 100)
+         : 0;
+
+   return (
+      <View className="flex-1 bg-background">
+         <ScrollView
+            className="flex-1 pb-20"
+            showsVerticalScrollIndicator={false}
+         >
+            <Image
+               source={{
+                  uri:
+                     product.main_image_url ||
+                     "https://via.placeholder.com/400",
+               }}
+               className="w-full"
+               style={{ height: width }}
+               contentFit="cover"
+            />
+
+            {discount > 0 && (
+               <View className="absolute top-4 right-4 bg-secondary px-3 py-2 rounded-lg">
+                  <Text className="text-white text-base font-bold">
+                     {discount}% OFF
+                  </Text>
+               </View>
             )}
-            {product.compare_at_price && product.compare_at_price > product.price && (
-              <View className="bg-success/20 px-2 py-1 rounded">
-                <Text className="text-success font-semibold text-sm">
-                  Save FRW {product.compare_at_price - product.price}
-                </Text>
-              </View>
-            )}
-          </View>
 
-          <View className="flex-row items-center space-x-2 bg-primary/10 p-3 rounded mb-5">
-            <Truck size={20} color={Colors.primary} />
-            <Text className="text-primary text-sm font-medium">Free delivery on orders above FRW 5000</Text>
-          </View>
+            <View className="p-4">
+               <View className="flex-row justify-between items-start mb-3">
+                  <View className="flex-1">
+                     {product.brand && (
+                        <Text className="text-primary text-base font-semibold mb-1">
+                           {product.brand}
+                        </Text>
+                     )}
+                  </View>
+                  <TouchableOpacity className="w-11 h-11 rounded-full bg-background items-center justify-center border border-border">
+                     <Heart
+                        size={24}
+                        color={Colors.error}
+                     />
+                  </TouchableOpacity>
+               </View>
 
-          <View className="h-px bg-border my-5" />
+               <Text className="text-2xl font-bold text-text mb-4">
+                  {product.name}
+               </Text>
 
-          <View className="mb-1">
-            <Text className="text-lg font-bold text-text mb-3">Description</Text>
-            <Text className="text-textSecondary text-base leading-6">{product.description}</Text>
-          </View>
+               <View className="flex-row items-center space-x-3 mb-4">
+                  <Text className="text-2xl font-bold text-primary">
+                     RWF {product.price}
+                  </Text>
+                  {product.compare_at_price &&
+                     product.compare_at_price > product.price && (
+                        <Text className="text-xl text-textSecondary line-through">
+                           RWF {product.compare_at_price}
+                        </Text>
+                     )}
+                  {product.compare_at_price &&
+                     product.compare_at_price > product.price && (
+                        <View className="bg-success/20 px-2 py-1 rounded">
+                           <Text className="text-success font-semibold text-sm">
+                              Save RWF{" "}
+                              {product.compare_at_price - product.price}
+                           </Text>
+                        </View>
+                     )}
+               </View>
 
-          <View className="h-px bg-border my-5" />
+               <View className="flex-row items-center space-x-2 bg-primary/10 p-3 rounded mb-5">
+                  <Truck
+                     size={20}
+                     color={Colors.primary}
+                  />
+                  <Text className="text-primary text-sm font-medium">
+                     Free delivery on orders above RWF 5000
+                  </Text>
+               </View>
 
-          <View className="mb-4">
-            <Text className="text-lg font-bold text-text mb-3">Product Details</Text>
-            {product.brand && (
-              <View className="flex-row justify-between py-2">
-                <Text className="text-textSecondary text-base">Brand</Text>
-                <Text className="text-text font-semibold text-base">{product.brand}</Text>
-              </View>
-            )}
-            <View className="flex-row justify-between py-2">
-              <Text className="text-textSecondary text-base">Stock</Text>
-              <Text className="text-text font-semibold text-base">{product.stock}</Text>
+               <View className="h-px bg-border my-5" />
+
+               <View className="mb-1">
+                  <Text className="text-lg font-bold text-text mb-3">
+                     Description
+                  </Text>
+                  <Text className="text-textSecondary text-base leading-6">
+                     {product.description}
+                  </Text>
+               </View>
+
+               <View className="h-px bg-border my-5" />
+
+               <View className="mb-4">
+                  <Text className="text-lg font-bold text-text mb-3">
+                     Product Details
+                  </Text>
+                  {product.brand && (
+                     <View className="flex-row justify-between py-2">
+                        <Text className="text-textSecondary text-base">
+                           Brand
+                        </Text>
+                        <Text className="text-text font-semibold text-base">
+                           {product.brand}
+                        </Text>
+                     </View>
+                  )}
+                  <View className="flex-row justify-between py-2">
+                     <Text className="text-textSecondary text-base">Stock</Text>
+                     <Text className="text-text font-semibold text-base">
+                        {product.stock}
+                     </Text>
+                  </View>
+                  <View className="flex-row justify-between py-2">
+                     <Text className="text-textSecondary text-base">
+                        Status
+                     </Text>
+                     <Text
+                        className={`text-base font-semibold ${isInStock ? "text-success" : "text-error"}`}
+                     >
+                        {isInStock ? "In Stock" : "Out of Stock"}
+                     </Text>
+                  </View>
+               </View>
             </View>
-            <View className="flex-row justify-between py-2">
-              <Text className="text-textSecondary text-base">Status</Text>
-              <Text className={`text-base font-semibold ${isInStock ? 'text-success' : 'text-error'}`}>
-                {isInStock ? 'In Stock' : 'Out of Stock'}
-              </Text>
+         </ScrollView>
+
+         <View className="flex-row p-4 space-x-3 bg-white border-t border-border">
+            <View className="flex-row items-center bg-background border border-border rounded">
+               <TouchableOpacity
+                  className="w-11 h-11 items-center justify-center"
+                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
+               >
+                  <Text className="text-primary text-2xl font-semibold">−</Text>
+               </TouchableOpacity>
+               <Text className="text-text text-lg font-bold text-center min-w-[40px]">
+                  {quantity}
+               </Text>
+               <TouchableOpacity
+                  className="w-11 h-11 items-center justify-center"
+                  onPress={() => setQuantity(quantity + 1)}
+               >
+                  <Text className="text-primary text-2xl font-semibold">+</Text>
+               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </ScrollView>
 
-      <View className="flex-row p-4 space-x-3 bg-white border-t border-border">
-        <View className="flex-row items-center bg-background border border-border rounded">
-          <TouchableOpacity className="w-11 h-11 items-center justify-center" onPress={() => setQuantity(Math.max(1, quantity - 1))}>
-            <Text className="text-primary text-2xl font-semibold">−</Text>
-          </TouchableOpacity>
-          <Text className="text-text text-lg font-bold text-center min-w-[40px]">{quantity}</Text>
-          <TouchableOpacity className="w-11 h-11 items-center justify-center" onPress={() => setQuantity(quantity + 1)}>
-            <Text className="text-primary text-2xl font-semibold">+</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          className={`flex-1 flex-row items-center justify-center space-x-2 rounded px-4 py-3 ${isInStock ? 'bg-primary' : 'bg-textSecondary'}`}
-          onPress={handleAddToCart}
-          disabled={!isInStock}
-        >
-          <ShoppingCart size={20} color={Colors.white} />
-          <Text className="text-white text-base font-bold">
-            {isInStock ? 'Add to Cart' : 'Out of Stock'}
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+               className={`flex-1 flex-row items-center justify-center space-x-2 rounded px-4 py-3 ${isInStock ? "bg-primary" : "bg-textSecondary"}`}
+               onPress={handleAddToCart}
+               disabled={!isInStock}
+            >
+               <ShoppingCart
+                  size={20}
+                  color={Colors.white}
+               />
+               <Text className="text-white text-base font-bold">
+                  {isInStock ? "Add to Cart" : "Out of Stock"}
+               </Text>
+            </TouchableOpacity>
+         </View>
       </View>
-    </View>
-  );
+   );
 }
 
 // Original StyleSheet kept for reference

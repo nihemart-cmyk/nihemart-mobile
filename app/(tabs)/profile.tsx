@@ -4,7 +4,7 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import useProfile from "@/hooks/useProfile";
 import useRequireAuth from "@/hooks/useRequireAuth";
 import { useAuthStore } from "@/store/auth.store";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import {
    Bell,
    ChevronDown,
@@ -69,8 +69,13 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             activeOpacity={0.7}
          >
             <Text className="text-lg font-bold text-text">{title}</Text>
-            <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-               <ChevronDown size={24} color={Colors.text} />
+            <Animated.View
+               style={{ transform: [{ rotate: rotateInterpolate }] }}
+            >
+               <ChevronDown
+                  size={24}
+                  color={Colors.text}
+               />
             </Animated.View>
          </TouchableOpacity>
          {expanded && (
@@ -106,6 +111,7 @@ export default function ProfileScreen() {
 
    const { profile, isLoading: profileLoading } = useProfile();
    const signOut = useAuthStore((s) => s.signOut);
+   const router = useRouter();
 
    const displayName =
       profile?.full_name ??
@@ -119,17 +125,23 @@ export default function ProfileScreen() {
       <>
          <Stack.Screen options={{ title: t("profile.title") }} />
          <ScrollView
-            className="flex-1 bg-background"
+            className="flex-1 bg-background pb-20"
             showsVerticalScrollIndicator={false}
          >
             {/* Modern Header with Gradient Effect */}
             <View className="bg-primary pt-12 pb-8 px-6 items-center">
                <View className="mb-4 relative">
                   <View className="w-24 h-24 rounded-full bg-white items-center justify-center shadow-lg">
-                     <User size={48} color={Colors.primary} />
+                     <User
+                        size={48}
+                        color={Colors.primary}
+                     />
                   </View>
                   <View className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-secondary items-center justify-center border-2 border-white">
-                     <Settings size={16} color={Colors.white} />
+                     <Settings
+                        size={16}
+                        color={Colors.white}
+                     />
                   </View>
                </View>
                <Text className="text-2xl font-bold text-white mb-1">
@@ -148,7 +160,10 @@ export default function ProfileScreen() {
                >
                   <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
-                        <Phone size={20} color={Colors.primary} />
+                        <Phone
+                           size={20}
+                           color={Colors.primary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-xs text-textSecondary mb-1">
@@ -158,12 +173,18 @@ export default function ProfileScreen() {
                            {profile?.phone ?? "+91 98765 43210"}
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
-                        <Mail size={20} color={Colors.primary} />
+                        <Mail
+                           size={20}
+                           color={Colors.primary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-xs text-textSecondary mb-1">
@@ -173,12 +194,18 @@ export default function ProfileScreen() {
                            {user?.email ?? "john.doe@email.com"}
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity className="p-4 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
-                        <MapPin size={20} color={Colors.primary} />
+                        <MapPin
+                           size={20}
+                           color={Colors.primary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-xs text-textSecondary mb-1">
@@ -188,7 +215,10 @@ export default function ProfileScreen() {
                            123 Main St, City, State 123456
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
                </CollapsibleSection>
 
@@ -199,7 +229,10 @@ export default function ProfileScreen() {
                      onPress={handleLanguageSwitch}
                   >
                      <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 items-center justify-center mr-3">
-                        <Languages size={20} color={Colors.secondary} />
+                        <Languages
+                           size={20}
+                           color={Colors.secondary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-base text-text font-medium">
@@ -209,7 +242,10 @@ export default function ProfileScreen() {
                            {language === "en" ? "English" : "Ikinyarwanda"}
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -228,7 +264,10 @@ export default function ProfileScreen() {
                      }}
                   >
                      <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 items-center justify-center mr-3">
-                        <Bell size={20} color={Colors.secondary} />
+                        <Bell
+                           size={20}
+                           color={Colors.secondary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-base text-text font-medium">
@@ -238,12 +277,18 @@ export default function ProfileScreen() {
                            Test push notifications
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity className="p-4 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 items-center justify-center mr-3">
-                        <Settings size={20} color={Colors.secondary} />
+                        <Settings
+                           size={20}
+                           color={Colors.secondary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-base text-text font-medium">
@@ -253,7 +298,10 @@ export default function ProfileScreen() {
                            Advanced settings
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
                </CollapsibleSection>
 
@@ -261,7 +309,10 @@ export default function ProfileScreen() {
                <CollapsibleSection title="Support & Legal">
                   <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
-                        <HelpCircle size={20} color={Colors.primary} />
+                        <HelpCircle
+                           size={20}
+                           color={Colors.primary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-base text-text font-medium">
@@ -271,12 +322,18 @@ export default function ProfileScreen() {
                            Get help and support
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity className="p-4 border-b border-gray-100 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
-                        <Shield size={20} color={Colors.primary} />
+                        <Shield
+                           size={20}
+                           color={Colors.primary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-base text-text font-medium">
@@ -286,12 +343,18 @@ export default function ProfileScreen() {
                            View our privacy policy
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity className="p-4 flex-row items-center">
                      <View className="w-10 h-10 rounded-full bg-primary bg-opacity-10 items-center justify-center mr-3">
-                        <FileText size={20} color={Colors.primary} />
+                        <FileText
+                           size={20}
+                           color={Colors.primary}
+                        />
                      </View>
                      <View className="flex-1">
                         <Text className="text-base text-text font-medium">
@@ -301,7 +364,10 @@ export default function ProfileScreen() {
                            Read our terms
                         </Text>
                      </View>
-                     <ChevronRight size={20} color={Colors.textSecondary} />
+                     <ChevronRight
+                        size={20}
+                        color={Colors.textSecondary}
+                     />
                   </TouchableOpacity>
                </CollapsibleSection>
 
@@ -316,7 +382,25 @@ export default function ProfileScreen() {
                            { text: t("common.cancel"), style: "cancel" },
                            {
                               text: t("profile.logout"),
-                              onPress: async () => await signOut(),
+                              onPress: async () => {
+                                 try {
+                                    await signOut();
+                                    // Ensure immediate navigation even if auth listener delays
+                                    try {
+                                       router.replace("/signin" as any);
+                                    } catch (navErr) {
+                                       console.warn(
+                                          "Router replace failed:",
+                                          navErr
+                                       );
+                                    }
+                                 } catch (err: any) {
+                                    Alert.alert(
+                                       t("common.error") || "Error",
+                                       err?.message || "Failed to sign out"
+                                    );
+                                 }
+                              },
                               style: "destructive",
                            },
                         ]
@@ -324,7 +408,10 @@ export default function ProfileScreen() {
                   }}
                >
                   <View className="w-10 h-10 rounded-full bg-error bg-opacity-10 items-center justify-center mr-3">
-                     <LogOut size={20} color={Colors.error} />
+                     <LogOut
+                        size={20}
+                        color={Colors.error}
+                     />
                   </View>
                   <Text className="text-base text-error font-semibold">
                      {t("profile.logout")}

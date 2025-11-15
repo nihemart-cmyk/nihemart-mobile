@@ -367,7 +367,7 @@ const CheckoutScreen = ({
    };
 
    return (
-      <ScrollView className="flex-1 bg-gray-50">
+      <ScrollView className="flex-1 bg-gray-50 pb-20">
          <View className="container mx-auto px-4 py-6">
             {/* Header */}
             <Text className="text-3xl font-bold text-gray-900 mb-6">

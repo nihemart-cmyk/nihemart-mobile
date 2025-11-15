@@ -1,12 +1,26 @@
 import Colors from "@/constants/colors";
+import Fonts from "@/constants/fonts";
 import { useApp } from "@/contexts/AppContext";
 import { useAuthStore } from "@/store/auth.store";
 import { Image } from "expo-image";
 import { Stack, useRouter } from "expo-router";
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react-native";
+import { Minus, Plus, ShoppingBag, Trash2, ShoppingCart, ArrowRight } from "lucide-react-native";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, Text, TouchableOpacity, View, Platform } from "react-native";
+
+// Modern NiheMart colors
+const NiheColors = {
+   primary: "#00A6E0",
+   accent: "#FF6B35",
+   background: "#F8FAFB",
+   surface: "#FFFFFF",
+   text: "#1A2332",
+   textSecondary: "#64748B",
+   border: "#E2E8F0",
+   error: "#EF4444",
+   success: "#10B981",
+};
 
 export default function CartScreen() {
    const { cart, updateCartQuantity, removeFromCart, cartTotal, placeOrder } =
@@ -19,7 +33,6 @@ export default function CartScreen() {
       const user = useAuthStore.getState().user;
 
       if (!user) {
-         // Not authenticated: send to sign in first
          router.push("/signin" as any);
          return;
       }
@@ -29,7 +42,6 @@ export default function CartScreen() {
          return;
       }
 
-      // Navigate directly to checkout screen
       router.push("/checkout" as any);
    };
 
@@ -48,24 +60,29 @@ export default function CartScreen() {
       return (
          <>
             <Stack.Screen options={{ headerShown: false }} />
-            <View className="flex-1 bg-background items-center justify-center p-6">
-               <ShoppingBag
-                  size={64}
-                  color={Colors.textSecondary}
-               />
-               <Text className="text-text text-3xl font-bold mt-4">
+            <View className="flex-1 bg-[#F8FAFB] items-center justify-center px-8">
+               <View className="w-36 h-36 rounded-full bg-white items-center justify-center mb-6 shadow-lg">
+                  <ShoppingBag
+                     size={80}
+                     color={NiheColors.textSecondary}
+                     strokeWidth={1.5}
+                  />
+               </View>
+               <Text className="text-[#1A2332] text-3xl font-bold mb-3 text-center" style={{ fontFamily: Fonts.bold }}>
                   {t("cart.empty")}
                </Text>
-               <Text className="text-textSecondary text-lg mt-2 mb-6">
+               <Text className="text-[#64748B] text-base text-center mb-8 leading-6" style={{ fontFamily: Fonts.regular }}>
                   {t("cart.emptyMessage")}
                </Text>
                <TouchableOpacity
-                  className="bg-primary px-8 py-3 rounded-xl"
+                  className="flex-row items-center bg-[#00A6E0] px-8 py-4 rounded-2xl gap-2 shadow-lg"
                   onPress={() => router.push("/(tabs)" as any)}
+                  activeOpacity={0.8}
                >
-                  <Text className="text-white text-lg font-semibold">
+                  <Text className="text-white text-lg font-bold" style={{ fontFamily: Fonts.bold }}>
                      {t("home.viewAll")}
                   </Text>
+                  <ArrowRight size={20} color="#FFFFFF" />
                </TouchableOpacity>
             </View>
          </>
@@ -75,128 +92,168 @@ export default function CartScreen() {
    return (
       <>
          <Stack.Screen options={{ headerShown: false }} />
-         <View className="flex-1 bg-background">
+         <View className="flex-1 bg-[#F8FAFB]">
+            {/* Header */}
+            <View className={`flex-row justify-between items-center px-5 ${Platform.OS === 'ios' ? 'pt-14' : 'pt-5'} pb-5 bg-white border-b border-[#E2E8F0]`}>
+               <View>
+                  <Text className="text-[#1A2332] text-3xl font-bold" style={{ fontFamily: Fonts.bold }}>
+                     My Cart
+                  </Text>
+                  <Text className="text-[#64748B] text-sm mt-1" style={{ fontFamily: Fonts.medium }}>
+                     {cart.length} {cart.length === 1 ? 'item' : 'items'}
+                  </Text>
+               </View>
+               <View className="w-12 h-12 rounded-full bg-[#F8FAFB] items-center justify-center">
+                  <ShoppingCart size={24} color={NiheColors.primary} />
+               </View>
+            </View>
+
+            {/* Cart Items */}
             <ScrollView
-               className="flex-1 p-4"
+               className="flex-1"
+               contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
                showsVerticalScrollIndicator={false}
             >
-               {cart.map((item) => (
+               {cart.map((item, index) => (
                   <View
                      key={item.product.id}
-                     className="flex-row bg-white rounded-xl p-3 mb-3 shadow-md"
+                     className={`flex-row bg-white rounded-2xl p-3 shadow-md ${index === cart.length - 1 ? 'mb-0' : 'mb-3'}`}
                   >
-                     <Image
-                        source={{ uri: item.product.image }}
-                        className="w-20 h-20 rounded-lg"
-                        contentFit="cover"
-                     />
+                     {/* Product Image */}
+                     <View className="w-[90px] h-[90px] rounded-xl overflow-hidden bg-[#F8FAFB]">
+                        <Image
+                           source={{ uri: item.product.image }}
+                           className="w-full h-full"
+                           contentFit="cover"
+                        />
+                     </View>
+
+                     {/* Product Details */}
                      <View className="flex-1 ml-3 justify-between">
                         <Text
-                           className="text-text text-base font-semibold"
+                           className="text-[#1A2332] text-[15px] font-semibold leading-5 mb-1"
                            numberOfLines={2}
+                           style={{ fontFamily: Fonts.semiBold || Fonts.medium }}
                         >
                            {item.product.name}
                         </Text>
-                        <Text className="text-primary text-lg font-bold">
-                           ₹{item.product.discountPrice || item.product.price}
-                        </Text>
+                        
+                        <View className="flex-row items-center gap-2 mb-2">
+                           <Text className="text-[#00A6E0] text-lg font-bold" style={{ fontFamily: Fonts.bold }}>
+                              {item.product.discountPrice || item.product.price} RWF
+                           </Text>
+                           {item.product.discountPrice && (
+                              <Text className="text-[#64748B] text-sm line-through" style={{ fontFamily: Fonts.medium }}>
+                                 {item.product.price} RWF
+                              </Text>
+                           )}
+                        </View>
+
+                        {/* Quantity Controls */}
                         <View className="flex-row items-center gap-3">
                            <TouchableOpacity
-                              className="w-7 h-7 rounded-lg bg-background items-center justify-center border border-primary"
+                              className="w-8 h-8 rounded-xl bg-[#F8FAFB] items-center justify-center border-[1.5px] border-[#00A6E0]"
                               onPress={() =>
                                  updateCartQuantity(
                                     item.product.id,
                                     item.quantity - 1
                                  )
                               }
+                              activeOpacity={0.7}
                            >
                               <Minus
-                                 size={16}
-                                 color={Colors.primary}
+                                 size={18}
+                                 color={NiheColors.primary}
+                                 strokeWidth={2.5}
                               />
                            </TouchableOpacity>
-                           <Text className="text-text text-lg font-semibold min-w-6 text-center">
-                              {item.quantity}
-                           </Text>
+                           
+                           <View className="min-w-8 items-center">
+                              <Text className="text-[#1A2332] text-base font-bold" style={{ fontFamily: Fonts.bold }}>
+                                 {item.quantity}
+                              </Text>
+                           </View>
+                           
                            <TouchableOpacity
-                              className="w-7 h-7 rounded-lg bg-background items-center justify-center border border-primary"
+                              className="w-8 h-8 rounded-xl bg-[#F8FAFB] items-center justify-center border-[1.5px] border-[#00A6E0]"
                               onPress={() =>
                                  updateCartQuantity(
                                     item.product.id,
                                     item.quantity + 1
                                  )
                               }
+                              activeOpacity={0.7}
                            >
                               <Plus
-                                 size={16}
-                                 color={Colors.primary}
+                                 size={18}
+                                 color={NiheColors.primary}
+                                 strokeWidth={2.5}
                               />
                            </TouchableOpacity>
                         </View>
                      </View>
+
+                     {/* Remove Button */}
                      <TouchableOpacity
-                        className="p-2 justify-center"
+                        className="justify-start pt-1"
                         onPress={() =>
                            handleRemove(item.product.id, item.product.name)
                         }
+                        activeOpacity={0.7}
                      >
-                        <Trash2
-                           size={20}
-                           color={Colors.error}
-                        />
+                        <View className="w-9 h-9 rounded-xl bg-[#F8FAFB] items-center justify-center">
+                           <Trash2
+                              size={20}
+                              color={NiheColors.error}
+                              strokeWidth={2}
+                           />
+                        </View>
                      </TouchableOpacity>
                   </View>
                ))}
             </ScrollView>
 
-            <View className="bg-white p-4 border-t border-border">
-               <View className="flex-row justify-between items-center mb-4">
-                  <Text className="text-text text-xl font-semibold">
-                     {t("cart.total")}:
-                  </Text>
-                  <Text className="text-primary text-2xl font-bold">
-                     ₹{cartTotal}
-                  </Text>
+            {/* Footer with Total and Checkout */}
+            <View className={`bg-white px-5 pt-5 ${Platform.OS === 'ios' ? 'pb-24' : 'pb-20'} border-t border-[#E2E8F0] shadow-2xl`}>
+               {/* Order Summary */}
+               <View className="mb-4">
+                  <View className="flex-row justify-between items-center mb-2">
+                     <Text className="text-[#64748B] text-[15px]" style={{ fontFamily: Fonts.medium }}>
+                        Subtotal
+                     </Text>
+                     <Text className="text-[#1A2332] text-[15px] font-semibold" style={{ fontFamily: Fonts.semiBold || Fonts.medium }}>
+                        {cartTotal} RWF
+                     </Text>
+                  </View>
+                  <View className="h-[1px] bg-[#E2E8F0] my-3" />
+                  <View className="flex-row justify-between items-center">
+                     <Text className="text-[#1A2332] text-lg font-bold" style={{ fontFamily: Fonts.bold }}>
+                        Total
+                     </Text>
+                     <Text className="text-[#00A6E0] text-2xl font-bold" style={{ fontFamily: Fonts.bold }}>
+                        {cartTotal} RWF
+                     </Text>
+                  </View>
                </View>
+
+               {/* Checkout Button */}
                <TouchableOpacity
-                  className={`bg-primary py-4 rounded-xl items-center ${isPlacingOrder && "opacity-60"}`}
+                  className={`flex-row bg-orange-500 py-[18px] rounded-2xl items-center justify-center gap-2 shadow-lg ${isPlacingOrder && 'opacity-60'}`}
                   onPress={handleCheckout}
                   disabled={isPlacingOrder}
+                  activeOpacity={0.8}
                >
-                  <Text className="text-white text-lg font-bold">
+                  <Text className="text-white text-[17px] font-bold" style={{ fontFamily: Fonts.bold }}>
                      {isPlacingOrder
                         ? t("common.loading")
                         : t("cart.proceedToCheckout")}
                   </Text>
+                  {!isPlacingOrder && (
+                     <ArrowRight size={22} color="#FFFFFF" strokeWidth={2.5} />
+                  )}
                </TouchableOpacity>
             </View>
          </View>
       </>
    );
 }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: Colors.background },
-//   emptyContainer: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: 24 },
-//   emptyTitle: { fontSize: 24, fontWeight: 'bold', color: Colors.text, marginTop: 16 },
-//   emptyText: { fontSize: 16, color: Colors.textSecondary, marginTop: 8, marginBottom: 24 },
-//   shopButton: { backgroundColor: Colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
-//   shopButtonText: { fontSize: 16, fontWeight: '600', color: Colors.white },
-//   content: { flex: 1, padding: 16 },
-//   cartItem: { flexDirection: 'row', backgroundColor: Colors.white, borderRadius: 12, padding: 12, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-//   productImage: { width: 80, height: 80, borderRadius: 8 },
-//   itemDetails: { flex: 1, marginLeft: 12, justifyContent: 'space-between' },
-//   productName: { fontSize: 14, color: Colors.text, fontWeight: '600' },
-//   productPrice: { fontSize: 16, fontWeight: 'bold', color: Colors.primary },
-//   quantityContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-//   quantityButton: { width: 28, height: 28, borderRadius: 6, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.primary },
-//   quantityText: { fontSize: 16, fontWeight: '600', color: Colors.text, minWidth: 24, textAlign: 'center' },
-//   removeButton: { padding: 8, justifyContent: 'center' },
-//   footer: { backgroundColor: Colors.white, padding: 16, borderTopWidth: 1, borderTopColor: Colors.border },
-//   totalContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-//   totalLabel: { fontSize: 18, color: Colors.text, fontWeight: '600' },
-//   totalAmount: { fontSize: 24, fontWeight: 'bold', color: Colors.primary },
-//   checkoutButton: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-//   checkoutButtonDisabled: { opacity: 0.6 },
-//   checkoutButtonText: { fontSize: 16, fontWeight: 'bold', color: Colors.white },
-// });

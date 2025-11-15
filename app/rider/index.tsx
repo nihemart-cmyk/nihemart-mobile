@@ -209,7 +209,7 @@ export default function RiderDashboard() {
          />
 
          <ScrollView
-            className="flex-1 bg-gray-50"
+            className="flex-1 bg-gray-50 pb-20"
             refreshControl={
                <RefreshControl
                   refreshing={refreshing}
