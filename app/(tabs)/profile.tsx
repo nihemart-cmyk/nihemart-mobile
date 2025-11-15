@@ -5,6 +5,7 @@ import useProfile from "@/hooks/useProfile";
 import useRequireAuth from "@/hooks/useRequireAuth";
 import { useAuthStore } from "@/store/auth.store";
 import { Stack, useRouter } from "expo-router";
+import NotificationsPreview from "@/components/NotificationsPreview";
 import {
    Bell,
    ChevronDown,
@@ -153,6 +154,9 @@ export default function ProfileScreen() {
             </View>
 
             <View className="p-4 -mt-4">
+               {/* Notifications Preview */}
+               <NotificationsPreview maxItems={3} />
+
                {/* Account Information - Collapsible */}
                <CollapsibleSection
                   title={t("profile.accountInfo")}

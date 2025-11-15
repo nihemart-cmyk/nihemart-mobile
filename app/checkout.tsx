@@ -3,7 +3,7 @@ import { useOrders } from "@/hooks/useOrders";
 import useProfile from "@/hooks/useProfile";
 import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
    ActivityIndicator,
    ScrollView,
@@ -26,6 +26,7 @@ import {
    ChevronUp,
    Package,
    ShoppingCart,
+   AlertCircle,
 } from "lucide-react-native";
 import { Linking } from "react-native";
 
@@ -72,6 +73,46 @@ const CheckoutScreen = ({
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [paymentInProgress, setPaymentInProgress] = useState(false);
    const [errors, setErrors] = useState<Record<string, string>>({});
+   const [ordersEnabled, setOrdersEnabled] = useState<boolean | null>(null);
+   const [deliveryTime, setDeliveryTime] = useState<string | null>(null);
+
+   const formatLocalDateTimeForInput = (d: Date) => {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      const mm = pad(d.getMonth() + 1);
+      const dd = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const min = pad(d.getMinutes());
+      return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+   };
+
+   const nextDayMinLocal = (() => {
+      const now = new Date();
+      const tomorrow = new Date(
+         now.getFullYear(),
+         now.getMonth(),
+         now.getDate() + 1,
+         0,
+         0,
+         0,
+         0
+      );
+      return formatLocalDateTimeForInput(tomorrow);
+   })();
+
+   const nextDayMaxLocal = (() => {
+      const now = new Date();
+      const tomorrowEnd = new Date(
+         now.getFullYear(),
+         now.getMonth(),
+         now.getDate() + 1,
+         23,
+         59,
+         0,
+         0
+      );
+      return formatLocalDateTimeForInput(tomorrowEnd);
+   })();
 
    const {
       initiatePayment,
@@ -79,6 +120,76 @@ const CheckoutScreen = ({
       validatePaymentRequest,
       isInitiating,
    } = useKPayPayment();
+
+   // Fetch orders_enabled flag and subscribe for realtime changes
+   useEffect(() => {
+      let mounted = true;
+      let channel: any = null;
+
+      (async () => {
+         try {
+            const res = await fetch("/api/admin/settings/orders-enabled");
+            if (!res.ok) {
+               if (mounted) setOrdersEnabled(null);
+            } else {
+               const j = await res.json();
+               if (mounted) setOrdersEnabled(Boolean(j.enabled));
+            }
+         } catch (err) {
+            console.warn("Failed to fetch orders_enabled flag:", err);
+            if (mounted) setOrdersEnabled(null);
+         }
+      })();
+
+      try {
+         // Dynamically import supabase client used across the mobile app
+         // to subscribe to site_settings changes for immediate UI updates.
+         // This mirrors the web behaviour where realtime updates are visible.
+         // eslint-disable-next-line @typescript-eslint/no-var-requires
+         const { supabase } = require("@/integrations/supabase/client");
+         channel = supabase
+            .channel("mobile_site_settings_orders_enabled")
+            .on(
+               "postgres_changes",
+               {
+                  event: "*",
+                  schema: "public",
+                  table: "site_settings",
+                  filter: "key=eq.orders_enabled",
+               },
+               (payload: any) => {
+                  try {
+                     const val = payload?.new?.value ?? payload?.old?.value;
+                     const enabled =
+                        val === true ||
+                        String(val) === "true" ||
+                        (val && val === "true");
+                     setOrdersEnabled(Boolean(enabled));
+                  } catch (e) {
+                     // ignore
+                  }
+               }
+            )
+            .subscribe();
+      } catch (e) {
+         // If supabase isn't available in this environment, ignore realtime subscription
+         console.warn("Supabase realtime subscription unavailable:", e);
+      }
+
+      return () => {
+         mounted = false;
+         try {
+            if (channel) {
+               // removeChannel expects the channel object
+               // eslint-disable-next-line @typescript-eslint/no-var-requires
+               const { supabase } = require("@/integrations/supabase/client");
+               supabase.removeChannel(channel);
+            }
+         } catch (e) {
+            // ignore
+         }
+      };
+   }, []);
 
    // If not logged in, redirect
    if (!authLoading && !isLoggedIn && !isRetryMode) {
@@ -197,6 +308,11 @@ const CheckoutScreen = ({
          newErrors.phone = "Please ensure your address has a phone number";
       }
 
+      // If orders are disabled, require a delivery time
+      if (ordersEnabled === false && !deliveryTime) {
+         newErrors.deliveryTime = "Please choose a delivery time for next day";
+      }
+
       return newErrors;
    };
 
@@ -243,6 +359,9 @@ const CheckoutScreen = ({
                status: "pending" as const,
                payment_method: paymentMethod || "cash_on_delivery",
                delivery_notes: deliveryNotes.trim() || undefined,
+               ...(deliveryTime
+                  ? { delivery_time: new Date(deliveryTime).toISOString() }
+                  : {}),
             },
             items: orderItems.map((item) => ({
                product_id: item.id,
@@ -387,6 +506,27 @@ const CheckoutScreen = ({
             )}
 
             <View className="space-y-6">
+               {/* Orders Disabled Banner */}
+               {ordersEnabled === false && (
+                  <View className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                     <View className="flex-row items-start">
+                        <AlertCircle
+                           className="text-yellow-600 mr-3 flex-shrink-0"
+                           size={20}
+                        />
+                        <View className="flex-1">
+                           <Text className="text-yellow-900 font-medium text-sm">
+                              We are not accepting regular deliveries right now
+                           </Text>
+                           <Text className="text-yellow-800 text-xs mt-2">
+                              Please choose a preferred delivery time for the
+                              next day below.
+                           </Text>
+                        </View>
+                     </View>
+                  </View>
+               )}
+
                {/* Customer Info Section */}
                <View className="bg-white rounded-lg p-4 shadow-sm">
                   <View className="mb-4">
@@ -438,6 +578,51 @@ const CheckoutScreen = ({
                      showAddButton={true}
                   />
                </View>
+
+               {/* Delivery Instructions */}
+               {/* Delivery Time Picker (shown when orders disabled) */}
+               {ordersEnabled === false && (
+                  <View className="bg-white rounded-lg p-4 shadow-sm border border-yellow-100">
+                     <Text className="text-lg font-medium text-gray-900 mb-3">
+                        Select Delivery Time
+                     </Text>
+                     <Text className="text-xs text-gray-600 mb-3">
+                        You may select any time on the next day. Admin will see
+                        the requested delivery time on the dashboard.
+                     </Text>
+                     <View className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                        <Text className="text-orange-700 text-xs font-medium">
+                           {deliveryTime
+                              ? `Time Selected: ${deliveryTime.substring(11, 16)}`
+                              : "Please select a delivery time below (next day, 00:00 - 23:59)"}
+                        </Text>
+                     </View>
+                     {errors.deliveryTime && (
+                        <Text className="text-red-500 text-xs mb-2">
+                           {errors.deliveryTime}
+                        </Text>
+                     )}
+                     <TouchableOpacity
+                        onPress={() => {
+                           // Pre-select next day at 9 AM by default
+                           const tomorrow = new Date();
+                           tomorrow.setDate(tomorrow.getDate() + 1);
+                           tomorrow.setHours(9, 0, 0, 0);
+                           setDeliveryTime(
+                              tomorrow.toISOString().substring(0, 16)
+                           );
+                        }}
+                        className="bg-orange-500 rounded-lg py-2 flex-row items-center justify-center mb-2"
+                     >
+                        <Text className="text-white text-sm font-semibold">
+                           {deliveryTime ? "Change Time" : "Select Time"}
+                        </Text>
+                     </TouchableOpacity>
+                     <Text className="text-xs text-gray-500 text-center">
+                        Default: Next day at 9:00 AM
+                     </Text>
+                  </View>
+               )}
 
                {/* Delivery Instructions */}
                <View className="bg-white rounded-lg p-4 shadow-sm">

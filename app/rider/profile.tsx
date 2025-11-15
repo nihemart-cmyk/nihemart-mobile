@@ -6,6 +6,7 @@ import { useRiderOrders } from "@/hooks/useRiderOrders";
 import { useRiderByUserId } from "@/hooks/useRiders";
 import { useAuthStore } from "@/store/auth.store";
 import { Stack, useRouter } from "expo-router";
+import NotificationsPreview from "@/components/NotificationsPreview";
 import {
    Bell,
    ChevronRight,
@@ -157,6 +158,11 @@ export default function RiderProfileScreen() {
                      Rating
                   </Text>
                </View>
+            </View>
+
+            {/* Notifications Preview */}
+            <View className="px-5 mb-6">
+               <NotificationsPreview maxItems={3} />
             </View>
 
             {/* Settings Section */}

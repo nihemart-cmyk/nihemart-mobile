@@ -73,10 +73,9 @@ export const [NotificationProvider, useNotifications] = createContextHook(
             const apiUrl =
                process.env.EXPO_PUBLIC_API_URL ||
                process.env.EXPO_PUBLIC_SITE_URL ||
-               "";
-            const endpoint = apiUrl
-               ? `${apiUrl}/api/notifications/mark-read`
-               : "/api/notifications/mark-read";
+               "http://localhost:3000";
+
+            const endpoint = `${apiUrl}/api/notifications/mark-read`;
 
             await fetch(endpoint, {
                method: "POST",
@@ -152,14 +151,18 @@ export const [NotificationProvider, useNotifications] = createContextHook(
             const apiUrl =
                process.env.EXPO_PUBLIC_API_URL ||
                process.env.EXPO_PUBLIC_SITE_URL ||
-               "";
+               "http://localhost:3000";
+
+            console.log("Fetching notifications from:", apiUrl);
 
             // Fetch user-specific notifications
-            const userEndpoint = apiUrl
-               ? `${apiUrl}/api/notifications?userId=${encodeURIComponent(user.id)}&limit=100`
-               : `/api/notifications?userId=${encodeURIComponent(user.id)}&limit=100`;
+            const userEndpoint = `${apiUrl}/api/notifications?userId=${encodeURIComponent(user.id)}&limit=100`;
+
+            console.log("User notifications endpoint:", userEndpoint);
 
             const userRes = await fetch(userEndpoint);
+            console.log("User notifications response status:", userRes.status);
+
             const userJson = userRes.ok
                ? await userRes.json()
                : { notifications: [] };
@@ -167,10 +170,12 @@ export const [NotificationProvider, useNotifications] = createContextHook(
 
             // Fetch role-based notifications if admin
             if (isAdmin) {
-               const adminEndpoint = apiUrl
-                  ? `${apiUrl}/api/notifications?role=admin&limit=100`
-                  : `/api/notifications?role=admin&limit=100`;
+               const adminEndpoint = `${apiUrl}/api/notifications?role=admin&limit=100`;
                const adminRes = await fetch(adminEndpoint);
+               console.log(
+                  "Admin notifications response status:",
+                  adminRes.status
+               );
                if (adminRes.ok) {
                   const adminJson = await adminRes.json();
                   combined = [...(adminJson.notifications || []), ...combined];
@@ -601,10 +606,9 @@ export const [NotificationProvider, useNotifications] = createContextHook(
             const apiUrl =
                process.env.EXPO_PUBLIC_API_URL ||
                process.env.EXPO_PUBLIC_SITE_URL ||
-               "";
-            const endpoint = apiUrl
-               ? `${apiUrl}/api/notifications/mark-read`
-               : "/api/notifications/mark-read";
+               "http://localhost:3000";
+
+            const endpoint = `${apiUrl}/api/notifications/mark-read`;
 
             await fetch(endpoint, {
                method: "POST",
@@ -645,10 +649,9 @@ export const [NotificationProvider, useNotifications] = createContextHook(
                const apiUrl =
                   process.env.EXPO_PUBLIC_API_URL ||
                   process.env.EXPO_PUBLIC_SITE_URL ||
-                  "";
-               const endpoint = apiUrl
-                  ? `${apiUrl}/api/notifications/clear`
-                  : "/api/notifications/clear";
+                  "http://localhost:3000";
+
+               const endpoint = `${apiUrl}/api/notifications/clear`;
 
                await fetch(endpoint, {
                   method: "POST",
