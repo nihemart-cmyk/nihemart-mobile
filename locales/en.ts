@@ -39,6 +39,7 @@ export default {
     welcome: 'Welcome to Nihemart',
     searchPlaceholder: 'Search products...',
     deals: 'Hot Deals',
+    under15k: 'Products Under',
     featured: 'Featured Products',
     viewAll: 'View All',
     allProducts: 'All Products',

@@ -39,6 +39,7 @@ export default {
     welcome: 'Murakaza neza kuri Nihemart',
     searchPlaceholder: 'Shakisha ibicuruzwa...',
     deals: 'Ibicuruzwa Byiza',
+    under15k: 'Ibicuruzwa biri munsi ya',
     featured: 'Ibicuruzwa Byihariye',
     viewAll: 'Reba Byose',
     allProducts: 'Ibicuruzwa Byose',

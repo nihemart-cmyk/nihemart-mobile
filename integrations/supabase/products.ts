@@ -87,6 +87,47 @@ export interface ProductQueryOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface ProductDetail extends Omit<Product, 'category' | 'subcategory'> {
+  categories: { id: string; name: string; }[];
+  subcategories: { id: string; name: string; }[];
+}
+
+export interface ProductVariationDetail extends ProductVariation {}
+
+export interface ProductImageDetail {
+  id: string;
+  url: string;
+  product_variation_id?: string;
+}
+
+export interface ProductReview {
+  id: string;
+  rating: number;
+  title: string;
+  content: string;
+  image_url?: string;
+  created_at: string;
+  author: { full_name: string; };
+}
+
+export interface StoreProduct {
+  id: string;
+  name: string;
+  price: number;
+  main_image_url?: string;
+  short_description?: string;
+  average_rating?: number;
+  category?: { id: string; name: string; };
+}
+
+export interface ProductPageData {
+  product: ProductDetail;
+  variations: ProductVariationDetail[];
+  images: ProductImageDetail[];
+  reviews: ProductReview[];
+  similarProducts: StoreProduct[];
+}
+
 export const fetchProductsPage = async (options: ProductQueryOptions) => {
   const {
     search,
@@ -184,17 +225,79 @@ export async function deleteProduct(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getProductById(id: string): Promise<Product | null> {
-  const { data, error } = await sb
-    .from('products')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null; // Not found
-    throw error;
+export const fetchStoreProductById = async (id: string): Promise<ProductPageData | null> => {
+  const { data: product, error } = await sb
+    .from("products")
+    .select(
+      `id, name, description, short_description, stock, price, compare_at_price, main_image_url, average_rating, review_count, brand, category:categories(id, name), categories:product_categories(category:categories(id, name)), subcategories:product_subcategories(subcategory:subcategories(id, name))`
+    )
+    .eq("id", id)
+    .in("status", ["active", "out_of_stock"])
+    .maybeSingle();
+  if (error || !product) {
+    return null;
   }
 
-  return data as Product;
-}
+  // Transform the product data to flatten nested relations
+  const transformedProduct = {
+    ...product,
+    categories: product.categories?.map((pc: any) => pc.category).filter(Boolean) || [],
+    subcategories: product.subcategories?.map((ps: any) => ps.subcategory).filter(Boolean) || [],
+  };
+
+  const [variationsRes, imagesRes, reviewsRes] = await Promise.all([
+    sb
+      .from("product_variations")
+      .select("id, name, price, stock, attributes")
+      .eq("product_id", id),
+    sb
+      .from("product_images")
+      .select("id, url, product_variation_id")
+      .eq("product_id", id),
+    sb
+      .from("reviews")
+      .select(
+        "id, rating, title, content, image_url, created_at, author:profiles!user_id(full_name)"
+      )
+      .eq("product_id", id),
+  ]);
+  if (variationsRes.error) throw variationsRes.error;
+  if (imagesRes.error) throw imagesRes.error;
+  if (reviewsRes.error) throw reviewsRes.error;
+
+  // Get similar products based on shared categories
+  let similarProducts: StoreProduct[] = [];
+  const productCategories = transformedProduct.categories;
+  if (productCategories && productCategories.length > 0) {
+    // Get product IDs that share categories with this product
+    const categoryIds = productCategories.map((cat: any) => cat.id);
+    const { data: similarProductIds, error: similarError } = await sb
+      .from("product_categories")
+      .select("product_id")
+      .in("category_id", categoryIds)
+      .neq("product_id", id);
+
+    if (!similarError && similarProductIds && similarProductIds.length > 0) {
+      const uniqueProductIds = [...new Set(similarProductIds.map((sp: any) => sp.product_id))];
+
+      const { data: similarData } = await sb
+        .from("products")
+        .select(
+          "id, name, price, main_image_url, short_description, average_rating, category:categories(id, name)"
+        )
+        .in("id", uniqueProductIds)
+        .in("status", ["active", "out_of_stock"])
+        .limit(6);
+
+      similarProducts = similarData || [];
+    }
+  }
+
+  return {
+    product: transformedProduct as ProductDetail,
+    variations: (variationsRes.data || []) as ProductVariationDetail[],
+    images: (imagesRes.data || []) as ProductImageDetail[],
+    reviews: (reviewsRes.data || []) as ProductReview[],
+    similarProducts,
+  };
+};

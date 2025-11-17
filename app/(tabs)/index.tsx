@@ -18,6 +18,10 @@ import {
 } from "react-native";
 import SearchOverlay from "@/components/SearchOverlay";
 import HomeScreenSkeleton from "@/components/skeletons/HomeScreenSkeleton";
+import CategoriesCarousel from "@/components/CategoriesCarousel";
+import CategoryCarouselSkeleton from "@/components/skeletons/CategoryCarouselSkeleton";
+import DealsCarousel from "@/components/DealsCarousel";
+import DealsCarouselSkeleton from "@/components/skeletons/DealsCarouselSkeleton";
 
 const { width } = Dimensions.get("window");
 
@@ -25,9 +29,13 @@ const { width } = Dimensions.get("window");
 const HomeScreenHeader = ({
    categories,
    featuredProducts,
+   isCategoriesLoading,
+   isFeaturedLoading,
 }: {
    categories: any[];
    featuredProducts: Product[];
+   isCategoriesLoading: boolean;
+   isFeaturedLoading: boolean;
 }) => {
    const router = useRouter();
    const { t } = useTranslation();
@@ -48,88 +56,30 @@ const HomeScreenHeader = ({
                   </Text>
                </TouchableOpacity>
             </View>
-            <ScrollView
-               horizontal
-               showsHorizontalScrollIndicator={false}
-               className="pl-4"
-            >
-               {categories.map((category) => (
-                  <TouchableOpacity
-                     key={category.id}
-                     className="w-36 h-24 mr-3 rounded-xl overflow-hidden"
-                     onPress={() =>
-                        router.push(`/category/${category.id}` as any)
-                     }
-                  >
-                     <Image
-                        source={{
-                           uri:
-                              category.icon_url ||
-                              "https://via.placeholder.com/150",
-                        }}
-                        className="w-full h-full"
-                        contentFit="cover"
-                     />
-                     <View className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <Text className="text-white text-lg font-bold">
-                           {category.name}
-                        </Text>
-                     </View>
-                  </TouchableOpacity>
-               ))}
-            </ScrollView>
+            {isCategoriesLoading ? (
+               <CategoryCarouselSkeleton />
+            ) : (
+               <CategoriesCarousel categories={categories} />
+            )}
          </View>
 
          {/* Deals Section */}
          <View className="py-5">
             <View className="flex-row justify-between items-center px-4 mb-4">
                <View className="flex-row items-center gap-2">
-                  <TrendingUp
-                     size={20}
-                     color={Colors.primary}
-                  />
-                  <Text className="text-text text-2xl font-bold">
-                     {t("home.deals")}
+                  <Text className="text-text text-xl font-bold">
+                     {t("home.under15k")} <Text className="text-primary">15,000 RWF</Text>
                   </Text>
                </View>
+               <TouchableOpacity onPress={() => router.push("/products?featured=true" as any)}>
+                  <Text className="text-primary text-sm font-semibold">{t("home.viewAll")}</Text>
+               </TouchableOpacity>
             </View>
-            <View className="px-2 grid grid-cols-2 gap-2">
-               {featuredProducts.map((product) => (
-                  <TouchableOpacity
-                     key={product.id}
-                     className="w-42 mb-4 bg-white rounded-xl overflow-hidden shadow-sm"
-                     onPress={() =>
-                        router.push(`/product/${product.id}` as any)
-                     }
-                  >
-                     <Image
-                        source={{
-                           uri:
-                              product.main_image_url ||
-                              "https://via.placeholder.com/150",
-                        }}
-                        className="w-full h-40"
-                        contentFit="cover"
-                     />
-                     {product.compare_at_price &&
-                        product.compare_at_price > product.price && (
-                           <View className="absolute top-2 right-2 bg-primary px-2 py-1 rounded-lg">
-                              <Text className="text-white text-xs font-bold">
-                                 FRW {product.price}
-                              </Text>
-                           </View>
-                        )}
-                     <View className="p-3">
-                        <Text
-                           className="text-text text-base truncate"
-                           numberOfLines={2}
-                        >
-                           {product.name}
-                        </Text>
-                     </View>
-                  </TouchableOpacity>
-               ))}
-            </View>
+            {isFeaturedLoading ? (
+               <DealsCarouselSkeleton />
+            ) : (
+               <DealsCarousel products={featuredProducts} />
+            )}
          </View>
 
          {/* "All Products" Title Section */}
@@ -157,8 +107,8 @@ export default function HomeScreen() {
    const { t } = useTranslation();
    const [isSearchVisible, setIsSearchVisible] = useState(false);
 
-   const { data: categories = [] } = useCategories();
-   const { data: featuredData } = useProducts({ featured: true, limit: 6 });
+   const { data: categories = [], isLoading: isCategoriesLoading } = useCategories();
+   const { data: featuredData, isLoading: isFeaturedLoading } = useProducts({ featured: true, limit: 6 });
    const featuredProducts: Product[] =
       (featuredData as { pages: { products: Product[] }[] })?.pages.flatMap(
          (page) => page.products
@@ -245,6 +195,8 @@ export default function HomeScreen() {
                <HomeScreenHeader
                   categories={categories}
                   featuredProducts={featuredProducts}
+                  isCategoriesLoading={isCategoriesLoading}
+                  isFeaturedLoading={isFeaturedLoading}
                />
             }
             contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 80 }}
