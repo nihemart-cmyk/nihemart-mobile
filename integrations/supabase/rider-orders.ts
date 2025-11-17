@@ -34,13 +34,10 @@ export async function fetchRiderAssignments(riderId: string) {
       const { data, error, count } = await supabase
          .from("order_assignments")
          .select(
-            `
-            id as assignment_id,
-            status as assignment_status,
+            `id,
+            status,
             assigned_at,
-            accepted_at,
-            completed_at,
-            rejected_at,
+            responded_at,
             order:orders(
                id,
                order_number,
@@ -53,8 +50,7 @@ export async function fetchRiderAssignments(riderId: string) {
                total,
                status,
                items:order_items(id, product_name, quantity, price)
-            )
-         `,
+            )`,
             { count: "exact" }
          )
          .eq("rider_id", riderId)
@@ -65,7 +61,7 @@ export async function fetchRiderAssignments(riderId: string) {
       // Transform data to flat structure
       const transformedData = (data || []).map((assignment: any) => ({
          id: assignment.order?.id,
-         assignment_id: assignment.assignment_id,
+         assignment_id: assignment.id,
          order_id: assignment.order?.id,
          rider_id: riderId,
          order_number: assignment.order?.order_number,
@@ -79,12 +75,21 @@ export async function fetchRiderAssignments(riderId: string) {
          delivery_longitude: assignment.order?.delivery_longitude,
          total: assignment.order?.total,
          status: assignment.order?.status,
-         assignment_status: assignment.assignment_status,
+         assignment_status: assignment.status,
          items_count: assignment.order?.items?.length || 0,
          assigned_at: assignment.assigned_at,
-         accepted_at: assignment.accepted_at,
-         completed_at: assignment.completed_at,
-         rejected_at: assignment.rejected_at,
+         accepted_at:
+            assignment.status === "accepted"
+               ? assignment.responded_at
+               : undefined,
+         completed_at:
+            assignment.status === "completed"
+               ? assignment.responded_at
+               : undefined,
+         rejected_at:
+            assignment.status === "rejected"
+               ? assignment.responded_at
+               : undefined,
          items: assignment.order?.items || [],
       })) as RiderOrder[];
 
@@ -106,7 +111,7 @@ export async function acceptRiderAssignment(assignmentId: string) {
          .from("order_assignments")
          .update({
             status: "accepted",
-            accepted_at: now,
+            responded_at: now,
          })
          .eq("id", assignmentId)
          .select()
@@ -137,7 +142,7 @@ export async function rejectRiderAssignment(assignmentId: string) {
          .from("order_assignments")
          .update({
             status: "rejected",
-            rejected_at: now,
+            responded_at: now,
          })
          .eq("id", assignmentId)
          .select()
@@ -168,7 +173,7 @@ export async function completeRiderAssignment(assignmentId: string) {
          .from("order_assignments")
          .update({
             status: "completed",
-            completed_at: now,
+            responded_at: now,
          })
          .eq("id", assignmentId)
          .select()
