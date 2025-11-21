@@ -111,14 +111,10 @@ export default function RootLayout() {
    const [appIsReady, setAppIsReady] = useState(false);
 
    const [fontsLoaded] = useFonts({
-      "Poppins-Regular":
-         "https://fonts.gstatic.com/s/poppins/v21/pxiEyp8kv8JHgFVrJJfecg.ttf",
-      "Poppins-Medium":
-         "https://fonts.gstatic.com/s/poppins/v21/pxiByp8kv8JHgFVrLGT9Z1xlFQ.ttf",
-      "Poppins-SemiBold":
-         "https://fonts.gstatic.com/s/poppins/v21/pxiByp8kv8JHgFVrLEj6Z1xlFQ.ttf",
-      "Poppins-Bold":
-         "https://fonts.gstatic.com/s/poppins/v21/pxiByp8kv8JHgFVrLCz7Z1xlFQ.ttf",
+      "Poppins-Regular": require("../assets/fonts/Poppins-Regular.ttf"),
+      "Poppins-Medium": require("../assets/fonts/Poppins-Medium.ttf"),
+      "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
+      "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
    });
 
    useEffect(() => {
