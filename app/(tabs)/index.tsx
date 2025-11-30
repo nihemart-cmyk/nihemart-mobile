@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import DealsCarousel from "@/components/DealsCarousel";
+import SearchOverlay from "@/components/SearchOverlay";
+import DealsCarouselSkeleton from "@/components/skeletons/DealsCarouselSkeleton";
+import HomeScreenSkeleton from "@/components/skeletons/HomeScreenSkeleton";
 import Colors from "@/constants/colors";
 import { useApp } from "@/contexts/AppContext";
 import { useCategories } from "@/hooks/useCategories";
@@ -6,282 +9,311 @@ import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@/integrations/supabase/products";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Search, ShoppingBag, TrendingUp, WifiOff } from "lucide-react-native";
+import { Bell, Heart, Search } from "lucide-react-native";
+import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-   Dimensions,
-   ScrollView,
-   Text,
-   TouchableOpacity,
-   View,
-   FlatList,
+  Animated,
+  Dimensions,
+  Easing,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import SearchOverlay from "@/components/SearchOverlay";
-import HomeScreenSkeleton from "@/components/skeletons/HomeScreenSkeleton";
-import CategoriesCarousel from "@/components/CategoriesCarousel";
-import CategoryCarouselSkeleton from "@/components/skeletons/CategoryCarouselSkeleton";
-import DealsCarousel from "@/components/DealsCarousel";
-import DealsCarouselSkeleton from "@/components/skeletons/DealsCarouselSkeleton";
 
 const { width } = Dimensions.get("window");
 
 // Header component for content above the products list
 const HomeScreenHeader = ({
-   categories,
-   featuredProducts,
-   isCategoriesLoading,
-   isFeaturedLoading,
+  featuredProducts,
+  isFeaturedLoading,
 }: {
-   categories: any[];
-   featuredProducts: Product[];
-   isCategoriesLoading: boolean;
-   isFeaturedLoading: boolean;
+  featuredProducts: Product[];
+  isFeaturedLoading: boolean;
 }) => {
-   const router = useRouter();
-   const { t } = useTranslation();
+  const { t } = useTranslation();
 
-   return (
-      <>
-         {/* Categories Section */}
-         <View className="py-5">
-            <View className="flex-row justify-between items-center px-4 mb-4">
-               <Text className="text-text text-2xl font-bold">
-                  {t("categories.title")}
-               </Text>
-               <TouchableOpacity
-                  onPress={() => router.push("/(tabs)/categories" as any)}
-               >
-                  <Text className="text-primary text-sm font-semibold">
-                     {t("home.viewAll")}
-                  </Text>
-               </TouchableOpacity>
-            </View>
-            {isCategoriesLoading ? (
-               <CategoryCarouselSkeleton />
-            ) : (
-               <CategoriesCarousel categories={categories} />
-            )}
-         </View>
+  return (
+    <>
+      {/* Deals/Promo Section */}
+      <View className="py-4 px-4">
+        {isFeaturedLoading ? (
+          <DealsCarouselSkeleton />
+        ) : (
+          <DealsCarousel products={featuredProducts} />
+        )}
+      </View>
 
-         {/* Deals Section */}
-         <View className="py-5">
-            <View className="flex-row justify-between items-center px-4 mb-4">
-               <View className="flex-row items-center gap-2">
-                  <Text className="text-text text-xl font-bold">
-                     {t("home.under15k")} <Text className="text-primary">15,000 RWF</Text>
-                  </Text>
-               </View>
-               <TouchableOpacity onPress={() => router.push("/products?featured=true" as any)}>
-                  <Text className="text-primary text-sm font-semibold">{t("home.viewAll")}</Text>
-               </TouchableOpacity>
-            </View>
-            {isFeaturedLoading ? (
-               <DealsCarouselSkeleton />
-            ) : (
-               <DealsCarousel products={featuredProducts} />
-            )}
-         </View>
-
-         {/* "All Products" Title Section */}
-         <View className="pt-5 pb-2">
-            <View className="flex-row justify-between items-center px-4 mb-2">
-               <Text className="text-text text-2xl font-bold">
-                  {t("home.allProducts")}
-               </Text>
-               <TouchableOpacity
-                  onPress={() => router.push("/products" as any)}
-               >
-                  <Text className="text-primary text-sm font-semibold">
-                     {t("home.viewAll")}
-                  </Text>
-               </TouchableOpacity>
-            </View>
-         </View>
-      </>
-   );
+      {/* "New Arrivals" Title Section */}
+      <View className="pt-2 pb-3 px-4">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-text text-2xl font-bold">New Arrivals 🔥</Text>
+          <TouchableOpacity onPress={() => {}}>
+            <Text className="text-[#6C5CE7] text-base font-semibold">
+              See All
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </>
+  );
 };
 
 export default function HomeScreen() {
-   const { cartItemsCount, isOffline } = useApp();
-   const router = useRouter();
-   const { t } = useTranslation();
-   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const { isOffline } = useApp();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
 
-   const { data: categories = [], isLoading: isCategoriesLoading } = useCategories();
-   const { data: featuredData, isLoading: isFeaturedLoading } = useProducts({ featured: true, limit: 6 });
-   const featuredProducts: Product[] =
-      (featuredData as { pages: { products: Product[] }[] })?.pages.flatMap(
-         (page) => page.products
-      ) || [];
+  // Animation ref for smooth indicator movement
+  const indicatorPosition = useRef(new Animated.Value(0)).current;
 
-   const {
-      data: productsData,
-      fetchNextPage,
-      hasNextPage,
-      isFetchingNextPage,
-      isLoading,
-   } = useProducts({ limit: 10 });
+  const animateTabSwitch = (tab: string) => {
+    setActiveTab(tab);
 
-   const allProducts: Product[] =
-      (productsData as { pages: { products: Product[] }[] })?.pages.flatMap(
-         (page) => page.products
-      ) || [];
+    Animated.timing(indicatorPosition, {
+      toValue: tab === "home" ? 0 : 1,
+      duration: 400,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: false,
+    }).start();
+  };
 
-   // Show skeleton only on the very first initial load
-   if (isLoading && !allProducts.length) {
-      return <HomeScreenSkeleton />;
-   }
+  const { data: categories = [], isLoading: isCategoriesLoading } =
+    useCategories();
 
-   return (
-      <View className="flex-1 bg-background">
-         <View className="bg-primary px-4 pt-4 pb-5 rounded-b-3xl">
-            <View className="flex-row justify-between items-center mb-4">
-               <View className="flex-1">
-                  <Text className="text-white opacity-90 text-base">
-                     Hello!
-                  </Text>
-                  <Text className="text-white text-3xl mt-2">
-                     {t("home.welcome")}
-                  </Text>
-                  {isOffline && (
-                     <View className="flex-row items-center gap-1 mt-1">
-                        <WifiOff
-                           size={12}
-                           color={Colors.white}
-                        />
-                        <Text className="text-white opacity-90 text-sm font-medium">
-                           {t("common.offline")}
-                        </Text>
-                     </View>
-                  )}
-               </View>
-               <TouchableOpacity
-                  className="w-12 h-12 rounded-full bg-white/20 items-center justify-center"
-                  onPress={() => router.push("/(tabs)/cart" as any)}
-               >
-                  <ShoppingBag
-                     size={24}
-                     color={Colors.white}
-                  />
-                  {cartItemsCount > 0 && (
-                     <View className="absolute top-1 right-1 bg-secondary w-5 h-5 rounded-full items-center justify-center">
-                        <Text className="text-white text-xs font-bold">
-                           {cartItemsCount}
-                        </Text>
-                     </View>
-                  )}
-               </TouchableOpacity>
+  // fetch deals: products under 15,000
+  const { data: featuredData, isLoading: isFeaturedLoading } = useProducts({
+    maxPrice: 15000,
+    limit: 6,
+  });
+  const featuredProducts: Product[] =
+    (featuredData as { pages: { products: Product[] }[] })?.pages.flatMap(
+      (page) => page.products
+    ) || [];
+
+  const {
+    data: productsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useProducts({ limit: 10 });
+
+  const allProducts: Product[] =
+    (productsData as { pages: { products: Product[] }[] })?.pages.flatMap(
+      (page) => page.products
+    ) || [];
+
+  // Show skeleton only on the very first initial load
+  if (isLoading && !allProducts.length) {
+    return <HomeScreenSkeleton />;
+  }
+
+  return (
+    <View className="flex-1 bg-background">
+      {/* Header */}
+      <View className="bg-white p-5">
+        <View className="flex-row justify-between items-center">
+          {/* User Greeting with Avatar */}
+          <View className="flex-row items-center flex-1">
+            <View className="w-16 h-16 rounded-full bg-gray-200 mr-3 overflow-hidden">
+              <Image
+                source={{ uri: "https://via.placeholder.com/64" }}
+                className="w-full h-full"
+                contentFit="cover"
+              />
             </View>
-
-            <TouchableOpacity
-               className="flex-row items-center bg-white rounded-xl px-3 py-3 gap-2"
-               onPress={() => setIsSearchVisible(true)}
-            >
-               <Search
-                  size={20}
-                  color={Colors.textSecondary}
-               />
-               <Text className="flex-1 text-base text-textSecondary">
-                  {t("home.searchPlaceholder")}
-               </Text>
+            <View>
+              <Text className="text-text text-lg font-bold">Hi, Jonathan</Text>
+              <Text className="text-gray-400 text-sm">Let's go shopping</Text>
+            </View>
+          </View>
+          {/* Search and Bell Icons */}
+          <View className="flex-row items-center gap-4">
+            <TouchableOpacity onPress={() => setIsSearchVisible(true)}>
+              <Search size={26} color={Colors.text} strokeWidth={2} />
             </TouchableOpacity>
-         </View>
-
-         <FlatList
-            data={allProducts}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            ListHeaderComponent={
-               <HomeScreenHeader
-                  categories={categories}
-                  featuredProducts={featuredProducts}
-                  isCategoriesLoading={isCategoriesLoading}
-                  isFeaturedLoading={isFeaturedLoading}
-               />
-            }
-            contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 80 }}
-            onEndReached={() => {
-               if (hasNextPage && !isFetchingNextPage) {
-                  fetchNextPage();
-               }
-            }}
-            onEndReachedThreshold={0.5}
-            renderItem={({ item: product }) => (
-               <TouchableOpacity
-                  className="flex-1 m-2 mb-4 bg-white rounded-xl overflow-hidden shadow-sm"
-                  onPress={() => router.push(`/product/${product.id}` as any)}
-               >
-                  <Image
-                     source={{
-                        uri:
-                           product.main_image_url ||
-                           "https://via.placeholder.com/150",
-                     }}
-                     className="w-full h-40"
-                     contentFit="cover"
-                  />
-                  <View className="p-3">
-                     <Text className="text-primary text-xl font-bold">
-                        FRW {product.price}
-                     </Text>
-                     <Text
-                        className="text-text text-base truncate font-medium"
-                        numberOfLines={2}
-                     >
-                        {product.name}
-                     </Text>
-                  </View>
-               </TouchableOpacity>
-            )}
-            ListFooterComponent={
-               isFetchingNextPage ? (
-                  <View className="py-4 items-center">
-                     <Text className="text-textSecondary">Loading more...</Text>
-                  </View>
-               ) : null
-            }
-         />
-
-         <SearchOverlay
-            visible={isSearchVisible}
-            onClose={() => setIsSearchVisible(false)}
-         />
+            <TouchableOpacity className="relative">
+              <Bell size={26} color={Colors.text} strokeWidth={2} />
+              {/* Notification Badge */}
+              <View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-   );
-}
 
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: Colors.background },
-//   header: { backgroundColor: Colors.primary, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-//   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-//   greeting: { fontSize: 16, color: Colors.white, opacity: 0.9, fontFamily: Fonts.regular },
-//   welcomeText: { fontSize: 24, fontFamily: Fonts.bold, color: Colors.white, marginTop: 2 },
-//   cartButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.2)', alignItems: 'center', justifyContent: 'center' },
-//   cartBadge: { position: 'absolute', top: 4, right: 4, backgroundColor: Colors.secondary, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-//   cartBadgeText: { color: Colors.white, fontSize: 12, fontFamily: Fonts.bold },
-//   offlineBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-//   offlineText: { fontSize: 12, color: Colors.white, opacity: 0.9, fontFamily: Fonts.medium },
-//   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12, gap: 8 },
-//   searchInput: { flex: 1, fontSize: 16, color: Colors.text, fontFamily: Fonts.regular },
-//   content: { flex: 1 },
-//   section: { paddingVertical: 20 },
-//   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16 },
-//   titleWithIcon: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-//   sectionTitle: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.text },
-//   seeAll: { fontSize: 14, color: Colors.primary, fontFamily: Fonts.semiBold },
-//   categoriesScroll: { paddingLeft: 16 },
-//   categoryCard: { width: 140, height: 100, marginRight: 12, borderRadius: 12, overflow: 'hidden' },
-//   categoryImage: { width: '100%', height: '100%' },
-//   categoryOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.3)', justifyContent: 'center', alignItems: 'center' },
-//   categoryName: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.white },
-//   productsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 },
-//   productCard: { width: (width - 48) / 2, marginHorizontal: 8, marginBottom: 16, backgroundColor: Colors.white, borderRadius: 12, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-//   productImage: { width: '100%', height: 160 },
-//   discountBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: Colors.secondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-//   discountText: { color: Colors.white, fontSize: 12, fontFamily: Fonts.bold },
-//   productInfo: { padding: 12 },
-//   productName: { fontSize: 14, color: Colors.text, marginBottom: 8, height: 40, fontFamily: Fonts.medium },
-//   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-//   productPrice: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.primary },
-//   originalPrice: { fontSize: 14, color: Colors.textSecondary, textDecorationLine: 'line-through', fontFamily: Fonts.regular },
-// });
+      {/* Home/Category Tabs */}
+      <View className="bg-white border-b border-gray-100 w-full">
+        <View className="flex-row px-5">
+          <TouchableOpacity
+            className="flex-1 items-center py-4"
+            onPress={() => animateTabSwitch("home")}
+            activeOpacity={0.7}
+          >
+            <Text
+              className={`font-bold text-lg ${
+                activeTab === "home" ? "text-text" : "text-gray-500"
+              }`}
+            >
+              Home
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-1 items-center py-4"
+            onPress={() => animateTabSwitch("category")}
+            activeOpacity={0.7}
+          >
+            <Text
+              className={`font-bold text-lg ${
+                activeTab === "category" ? "text-text" : "text-gray-500"
+              }`}
+            >
+              Category
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Animated Indicator Bar (width and marginLeft interpolate per tab) */}
+        <Animated.View
+          style={{
+            height: 4,
+            width: indicatorPosition.interpolate({
+              inputRange: [0, 1],
+              outputRange: [150, 150],
+            }),
+            backgroundColor: "#6C5CE7",
+            borderRadius: 2,
+            marginLeft: indicatorPosition.interpolate({
+              inputRange: [0, 1],
+              outputRange: [30, 190],
+            }),
+          }}
+        />
+      </View>
+
+      {/* Main Content */}
+      {activeTab === "home" ? (
+        <FlatList
+          key="home-list"
+          data={allProducts}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          ListHeaderComponent={
+            <HomeScreenHeader
+              featuredProducts={featuredProducts}
+              isFeaturedLoading={isFeaturedLoading}
+            />
+          }
+          contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 80 }}
+          columnWrapperStyle={{ paddingHorizontal: 8 }}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item: product }) => (
+            <TouchableOpacity
+              className="flex-1 m-2 mb-4 bg-white rounded-2xl overflow-hidden"
+              style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                elevation: 3,
+              }}
+              onPress={() => router.push(`/product/${product.id}` as any)}
+            >
+              <View className="relative">
+                <Image
+                  source={{
+                    uri:
+                      product.main_image_url ||
+                      "https://via.placeholder.com/150",
+                  }}
+                  className="w-full h-44"
+                  contentFit="cover"
+                />
+                <TouchableOpacity className="absolute top-3 right-3 w-10 h-10 bg-white/90 rounded-full items-center justify-center">
+                  <Heart size={18} color="#999" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+              <View className="p-3">
+                <Text className="text-text text-lg font-bold" numberOfLines={1}>
+                  {product.name}
+                </Text>
+                <Text
+                  className="text-gray-400 text-sm mt-0.5"
+                  numberOfLines={1}
+                >
+                  Brand Name
+                </Text>
+                <Text className="text-text text-base font-bold mt-1">
+                  ${product.price}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View className="py-4 items-center">
+                <Text className="text-textSecondary">Loading more...</Text>
+              </View>
+            ) : null
+          }
+        />
+      ) : (
+        <FlatList
+          key="category-list"
+          data={categories}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={{
+            paddingHorizontal: 8,
+            paddingTop: 16,
+            paddingBottom: 80,
+          }}
+          columnWrapperStyle={{ paddingHorizontal: 8 }}
+          scrollEnabled
+          renderItem={({ item: category }) => (
+            <TouchableOpacity
+              className="flex-1 m-2 bg-white rounded-2xl overflow-hidden items-center p-6"
+              style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                elevation: 3,
+              }}
+              onPress={() =>
+                router.push(`/products?categories=${category.id}` as any)
+              }
+            >
+              <View className="w-32 h-32 items-center justify-center mb-4">
+                <Image
+                  source={{
+                    uri: category.icon_url || "https://via.placeholder.com/150",
+                  }}
+                  className="w-full h-full"
+                  contentFit="contain"
+                />
+              </View>
+              <Text className="text-text text-base font-semibold text-center">
+                {category.name}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
+
+      <SearchOverlay
+        visible={isSearchVisible}
+        onClose={() => setIsSearchVisible(false)}
+      />
+    </View>
+  );
+}

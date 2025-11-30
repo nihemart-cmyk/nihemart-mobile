@@ -22,6 +22,8 @@ module.exports = {
         error: "#EF4444",
         white: "#FFFFFF",
         black: "#000000",
+        accent: "#00A6E0",
+        muted: "#F3F4F6",
 
         light: {
           text: "#1A1A1A",

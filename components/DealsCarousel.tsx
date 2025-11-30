@@ -1,19 +1,21 @@
-// components/DealsCarousel.tsx
-import React, { useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Dimensions } from "react-native";
-import Carousel from "react-native-reanimated-carousel";
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import Colors from "@/constants/colors";
 import { Product } from "@/integrations/supabase/products";
 import { formatCurrency } from "@/lib/utils";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import { ChevronLeft, ChevronRight, Heart } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import React, { useRef, useState } from "react";
+import { Dimensions, Text, TouchableOpacity, View } from "react-native";
+import Carousel from "react-native-reanimated-carousel";
 
 const { width } = Dimensions.get("window");
 
 // We'll define the width of our carousel items.
 // A value around 70-75% of the screen width often looks best for this effect.
-const ITEM_WIDTH = width * 0.7;
+// Show the active item centered and reveal parts of neighbors by using
+// an item width slightly smaller than the screen and padding the carousel container
+// Keep the active item visually unshrunk by using a parallax scale near 1.
+const ITEM_WIDTH = width * 0.82;
 
 interface DealsCarouselProps {
   products: Product[];
@@ -29,7 +31,9 @@ const ProductCard = ({ product }: { product: Product }) => {
       onPress={() => router.push(`/product/${product.id}` as any)}
     >
       <Image
-        source={{ uri: product.main_image_url || "https://via.placeholder.com/150" }}
+        source={{
+          uri: product.main_image_url || "https://via.placeholder.com/150",
+        }}
         className="w-full h-full"
         contentFit="cover"
       />
@@ -58,32 +62,29 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({ products }) => {
 
   const showControls = products.length > 1;
 
+  // side padding so the center item sits in the middle of the screen
+  const sidePadding = (width - ITEM_WIDTH) / 2;
+
   return (
-    <View className="relative">
+    <View className="relative" style={{ paddingHorizontal: sidePadding }}>
       <Carousel
         ref={carouselRef}
-        // The total width of the Carousel component itself
-        width={width}
-        // The height of a single item
-        height={width * 0.8}
-        // The data for the carousel
+        // width of each item (smaller than screen to reveal neighbors)
+        width={ITEM_WIDTH}
+        // keep a pleasant aspect ratio
+        height={ITEM_WIDTH * 0.75}
         data={products}
-        // Enable infinite looping
         loop={true}
-        // Optional: auto-play feature
         autoPlay={true}
         autoPlayInterval={4000}
-        // The function that renders each item
         renderItem={({ item }) => <ProductCard product={item} />}
-        // Callback for when an item snaps into place
         onSnapToItem={(index) => setActiveIndex(index)}
-        // --- THIS IS THE MAGIC FOR THE VISUAL EFFECT ---
         mode="parallax"
         modeConfig={{
-          // How much the adjacent (inactive) slides should be scaled down. 0.8 means 80% of original size.
-          parallaxScrollingScale: 0.82,
-          // How much the adjacent slides should be visible. A larger number means they are further apart.
-          parallaxScrollingOffset: 60,
+          // keep the active slide at full size and scale adjacent slides minimally
+          parallaxScrollingScale: 0.98,
+          // offset for parallax effect (adjusted for ITEM_WIDTH)
+          parallaxScrollingOffset: 40,
         }}
       />
 
@@ -92,14 +93,14 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({ products }) => {
         <>
           <TouchableOpacity
             onPress={() => carouselRef.current?.prev()}
-            className="absolute left-4 top-1/2 p-2.5 bg-white/90 rounded-full shadow-lg"
+            className="absolute left-1 top-1/2 p-2.5 bg-white/90 rounded-full shadow-lg"
             style={{ transform: [{ translateY: -20 }] }}
           >
             <ChevronLeft size={22} color={Colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => carouselRef.current?.next()}
-            className="absolute right-4 top-1/2 p-2.5 bg-white/90 rounded-full shadow-lg"
+            className="absolute right-1 top-1/2 p-2.5 bg-white/90 rounded-full shadow-lg"
             style={{ transform: [{ translateY: -20 }] }}
           >
             <ChevronRight size={22} color={Colors.text} />
