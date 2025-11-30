@@ -42,6 +42,7 @@ export default {
     deals: "Hot Deals",
     under15k: "Products Under",
     featured: "Featured Products",
+    new: "New Arrivals",
     viewAll: "View All",
     allProducts: "All Products",
   },

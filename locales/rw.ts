@@ -42,6 +42,7 @@ export default {
     deals: "Ibicuruzwa Byiza",
     under15k: "Ibicuruzwa biri munsi ya",
     featured: "Ibicuruzwa Byihariye",
+    new: "Ibije vuba",
     viewAll: "Reba Byose",
     allProducts: "Ibicuruzwa Byose",
   },

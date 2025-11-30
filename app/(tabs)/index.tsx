@@ -38,6 +38,7 @@ const HomeScreenHeader = ({
     <>
       {/* Deals/Promo Section */}
       <View className="py-4 px-4">
+        <Text className="text-text text-2xl font-bold">{t("home.under15k")} 15k</Text>
         {isFeaturedLoading ? (
           <DealsCarouselSkeleton />
         ) : (
@@ -48,7 +49,7 @@ const HomeScreenHeader = ({
       {/* "New Arrivals" Title Section */}
       <View className="pt-2 pb-3 px-4">
         <View className="flex-row justify-between items-center">
-          <Text className="text-text text-2xl font-bold">New Arrivals 🔥</Text>
+          <Text className="text-text text-2xl font-bold">{t("home.new")}</Text>
           <TouchableOpacity onPress={() => {}}>
             <Text className="text-[#6C5CE7] text-base font-semibold">
               See All
@@ -93,6 +94,10 @@ export default function HomeScreen() {
     (featuredData as { pages: { products: Product[] }[] })?.pages.flatMap(
       (page) => page.products
     ) || [];
+
+  // Debug: log featured data to help troubleshoot empty carousel
+  console.log("[HomeScreen] featuredData pages:", (featuredData as any)?.pages);
+  console.log("[HomeScreen] featuredProducts count:", featuredProducts.length);
 
   const {
     data: productsData,
@@ -149,7 +154,7 @@ export default function HomeScreen() {
       <View className="bg-white border-b border-gray-100 w-full">
         <View className="flex-row px-5">
           <TouchableOpacity
-            className="flex-1 items-center py-4"
+            className="flex-1 items-center py-2"
             onPress={() => animateTabSwitch("home")}
             activeOpacity={0.7}
           >
@@ -163,7 +168,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="flex-1 items-center py-4"
+            className="flex-1 items-center py-2"
             onPress={() => animateTabSwitch("category")}
             activeOpacity={0.7}
           >
@@ -222,7 +227,7 @@ export default function HomeScreen() {
               style={{
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
+                shadowOpacity: 0.1,
                 shadowRadius: 8,
                 elevation: 3,
               }}
@@ -235,7 +240,7 @@ export default function HomeScreen() {
                       product.main_image_url ||
                       "https://via.placeholder.com/150",
                   }}
-                  className="w-full h-44"
+                  className="w-full h-36"
                   contentFit="cover"
                 />
                 <TouchableOpacity className="absolute top-3 right-3 w-10 h-10 bg-white/90 rounded-full items-center justify-center">
@@ -246,14 +251,14 @@ export default function HomeScreen() {
                 <Text className="text-text text-lg font-bold" numberOfLines={1}>
                   {product.name}
                 </Text>
-                <Text
+                {/* <Text
                   className="text-gray-400 text-sm mt-0.5"
                   numberOfLines={1}
                 >
                   Brand Name
-                </Text>
-                <Text className="text-text text-base font-bold mt-1">
-                  ${product.price}
+                </Text> */}
+                <Text className="text-primary text-base font-bold mt-1">
+                  FRW {product.price}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -273,11 +278,11 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           numColumns={2}
           contentContainerStyle={{
-            paddingHorizontal: 8,
-            paddingTop: 16,
+            // paddingHorizontal: 16,
+            paddingTop: 20,
             paddingBottom: 80,
           }}
-          columnWrapperStyle={{ paddingHorizontal: 8 }}
+          // columnWrapperStyle={{ paddingHorizontal: 2 }}
           scrollEnabled
           renderItem={({ item: category }) => (
             <TouchableOpacity
@@ -285,7 +290,7 @@ export default function HomeScreen() {
               style={{
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
+                shadowOpacity: 0.1,
                 shadowRadius: 8,
                 elevation: 3,
               }}
@@ -293,7 +298,7 @@ export default function HomeScreen() {
                 router.push(`/products?categories=${category.id}` as any)
               }
             >
-              <View className="w-32 h-32 items-center justify-center mb-4">
+              <View className="w-32 h-20 items-center justify-center mb-4">
                 <Image
                   source={{
                     uri: category.icon_url || "https://via.placeholder.com/150",
