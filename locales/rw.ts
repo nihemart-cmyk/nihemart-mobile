@@ -23,6 +23,8 @@ export default {
     continue: "Komeza",
     english: "Icyongereza",
     kinyarwanda: "Ikinyarwanda",
+    nativeEnglish: "English",
+    nativeKinyarwanda: "Ikinyarwanda",
   },
 
   tabs: {

@@ -5,7 +5,7 @@ import { Tabs, useRouter } from "expo-router";
 import { Heart, Home, Truck, User } from "lucide-react-native";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Platform } from "react-native";
+import { Platform, Dimensions } from "react-native";
 import "../../globals.css";
 
 // Modern NiheMart color palette
@@ -19,6 +19,8 @@ const NiheColors = {
   border: "#E2E8F0",
   shadow: "rgba(0, 166, 224, 0.15)",
 };
+
+const { width } = Dimensions.get("window");
 
 export default function TabLayout() {
   const { mode, isLoading } = useApp();
@@ -70,7 +72,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontFamily: Fonts.semiBold || Fonts.medium,
-          fontSize: 12,
+          fontSize: width < 350 ? 10 : 12, // Responsive font size
           marginTop: 4,
           textAlign: "center", // Ensuring the label is centered
         },
@@ -103,8 +105,13 @@ export default function TabLayout() {
                 color={focused ? NiheColors.primary : NiheColors.textSecondary}
                 strokeWidth={focused ? 2.5 : 2}
               />
-              <span style={{ color: focused ? NiheColors.primary : NiheColors.textSecondary }}>
-                {t("tabs.home")}
+              <span
+                style={{
+                  color: focused ? NiheColors.primary : NiheColors.textSecondary,
+                }}
+              >
+                {/* {t("tabs.home")} */}
+                Home
               </span>
             </React.Fragment>
           ),
@@ -136,8 +143,13 @@ export default function TabLayout() {
                 color={focused ? NiheColors.primary : NiheColors.textSecondary}
                 strokeWidth={focused ? 2.5 : 2}
               />
-              <span style={{ color: focused ? NiheColors.primary : NiheColors.textSecondary }}>
-                {t("tabs.orders")}
+              <span
+                style={{
+                  color: focused ? NiheColors.primary : NiheColors.textSecondary,
+                }}
+              >
+                {/* {t("tabs.orders")} */}
+                Orders
               </span>
             </React.Fragment>
           ),
@@ -173,8 +185,13 @@ export default function TabLayout() {
                 fill={focused ? NiheColors.accent : "transparent"}
                 fillOpacity={focused ? 1 : 0}
               />
-              <span style={{ color: focused ? NiheColors.accent : NiheColors.textSecondary }}>
-                {t("tabs.wishlist")}
+              <span
+                style={{
+                  color: focused ? NiheColors.accent : NiheColors.textSecondary,
+                }}
+              >
+                {/* {t("tabs.wishlist")} */}
+                Favorites
               </span>
             </React.Fragment>
           ),
@@ -206,8 +223,13 @@ export default function TabLayout() {
                 color={focused ? NiheColors.primary : NiheColors.textSecondary}
                 strokeWidth={focused ? 2.5 : 2}
               />
-              <span style={{ color: focused ? NiheColors.primary : NiheColors.textSecondary }}>
-                {t("tabs.profile")}
+              <span
+                style={{
+                  color: focused ? NiheColors.primary : NiheColors.textSecondary,
+                }}
+              >
+                {/* {t("tabs.profile")} */}
+                Profile
               </span>
             </React.Fragment>
           ),

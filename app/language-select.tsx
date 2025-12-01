@@ -1,37 +1,38 @@
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { Globe, Check } from 'lucide-react-native';
-import Colors from '@/constants/colors';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import i18n from '@/locales/i18n';
-import { useTranslation } from 'react-i18next';
+import Colors from "@/constants/colors";
+import i18n from "@/locales/i18n";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { Check, Globe } from "lucide-react-native";
+import React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Animated, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-type Language = 'en' | 'rw';
+type Language = "en" | "rw";
 
 export default function LanguageSelectScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 8,
-        tension: 40,
+        friction: 9,
+        tension: 50,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
+  }, []);
 
   const handleLanguageSelect = async (language: Language) => {
     setSelectedLanguage(language);
@@ -40,48 +41,70 @@ export default function LanguageSelectScreen() {
 
   const handleContinue = async () => {
     try {
-      await AsyncStorage.setItem('language', selectedLanguage);
-      await AsyncStorage.setItem('hasSelectedLanguage', 'true');
-      router.replace('/(tabs)');
+      await AsyncStorage.setItem("language", selectedLanguage);
+      await AsyncStorage.setItem("hasSelectedLanguage", "true");
+      router.replace("/(tabs)");
     } catch (error) {
-      console.log('Error saving language:', error);
+      console.log("Error saving language:", error);
     }
   };
 
   const languages = [
-    { code: 'en' as Language, name: t('languageSelection.english'), nativeName: 'English' },
-    { code: 'rw' as Language, name: t('languageSelection.kinyarwanda'), nativeName: 'Ikinyarwanda' },
+    {
+      code: "en" as Language,
+      name: t("languageSelection.english"),
+      nativeName: t("languageSelection.nativeEnglish"),
+      flag: "🇬🇧",
+    },
+    {
+      code: "rw" as Language,
+      name: t("languageSelection.kinyarwanda"),
+      nativeName: t("languageSelection.nativeKinyarwanda"),
+      flag: "🇷🇼",
+    },
   ];
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: Colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: Colors.background }}
+      edges={["top", "bottom"]}
+    >
       <Animated.View
-        className="flex-1 px-6 justify-center items-center"
+        className="flex-1 px-6 justify-center"
         style={{
           opacity: fadeAnim,
           transform: [{ scale: scaleAnim }],
         }}
       >
-        <View className="mb-8">
+        {/* Icon */}
+        <View className="items-center mb-8">
           <View
-            className="w-30 h-30 rounded-full items-center justify-center border-2"
+            className="w-24 h-24 rounded-full items-center justify-center"
             style={{
-              backgroundColor: Colors.primary + '10',
-              borderColor: Colors.primary + '20',
+              backgroundColor: Colors.primary + "15",
             }}
           >
-            <Globe size={64} color={Colors.primary} strokeWidth={1.5} />
+            <Globe size={48} color={Colors.primary} strokeWidth={1.8} />
           </View>
         </View>
 
-        <Text className="text-[28px] font-bold text-center mb-2" style={{ color: Colors.text }}>
-          {t('languageSelection.title')}
+        {/* Title */}
+        <Text
+          className="text-3xl font-bold text-center mb-3"
+          style={{ color: Colors.text }}
+        >
+          {t("languageSelection.title")}
         </Text>
-        <Text className="text-base text-center mb-12" style={{ color: Colors.textSecondary }}>
-          {t('languageSelection.subtitle')}
+        <Text
+          className="text-base text-center mb-12 px-4"
+          style={{ color: Colors.textSecondary }}
+        >
+          {t("languageSelection.subtitle")}
         </Text>
 
-        <View className="w-full max-w-[400px] gap-4 mb-8">
+        {/* Language Options */}
+        <View className="w-full max-w-[400px] mx-auto gap-3 mb-8">
           {languages.map((language) => {
             const isSelected = selectedLanguage === language.code;
             return (
@@ -89,172 +112,62 @@ export default function LanguageSelectScreen() {
                 key={language.code}
                 onPress={() => handleLanguageSelect(language.code)}
                 activeOpacity={0.7}
-                className={`flex-row items-center justify-between rounded-2xl p-5 border-2 shadow-sm 
-                ${isSelected ? 'bg-primary border-primary' : 'bg-white'} `}
+                className="flex-row items-center justify-between rounded-2xl p-2 bg-white border"
                 style={{
                   borderColor: isSelected ? Colors.primary : Colors.border,
-                  backgroundColor: isSelected ? Colors.primary : Colors.white,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
+                  borderWidth: isSelected ? 2 : 1,
                 }}
               >
-                <View className="flex-1">
-                  <Text
-                    className={`text-[20px] font-semibold mb-1 ${isSelected ? 'text-white' : ''}`}
-                    style={!isSelected ? { color: Colors.text } : undefined}
-                  >
-                    {language.nativeName}
-                  </Text>
-                  <Text
-                    className={`text-[14px] ${isSelected ? 'text-white opacity-90' : ''}`}
-                    style={!isSelected ? { color: Colors.textSecondary } : undefined}
-                  >
-                    {language.name}
-                  </Text>
-                </View>
-                {isSelected && (
-                  <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                    <Check size={24} color={Colors.white} strokeWidth={3} />
+                <View className="flex-row items-center flex-1">
+                  <Text className="text-3xl mr-4">{language.flag}</Text>
+                  <View className="flex-1">
+                    <Text
+                      className="text-lg font-semibold mb-0.5"
+                      style={{ color: Colors.text }}
+                    >
+                      {language.nativeName}
+                    </Text>
+                    <Text
+                      className="text-sm"
+                      style={{ color: Colors.textSecondary }}
+                    >
+                      {language.name}
+                    </Text>
                   </View>
+                </View>
+                {isSelected ? (
+                  <View
+                    className="w-6 h-6 rounded-full items-center justify-center"
+                    style={{ backgroundColor: Colors.primary }}
+                  >
+                    <Check size={16} color="#fff" strokeWidth={3} />
+                  </View>
+                ) : (
+                  <View
+                    className="w-6 h-6 rounded-full border-2"
+                    style={{ borderColor: Colors.border }}
+                  />
                 )}
               </TouchableOpacity>
             );
           })}
         </View>
 
+        {/* Continue Button */}
         <TouchableOpacity
           onPress={handleContinue}
           activeOpacity={0.8}
-          className="w-full max-w-[400px] items-center rounded-xl py-4 px-12 shadow-lg"
+          className="items-center rounded-2xl py-3 px-16"
           style={{
             backgroundColor: Colors.secondary,
-            shadowColor: Colors.secondary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
           }}
         >
-          <Text className="text-lg font-bold" style={{ color: Colors.white }}>
-            {t('languageSelection.continue')}
+          <Text className="text-lg font-semibold" style={{ color: Colors.white }}>
+            {t("languageSelection.continue")}
           </Text>
         </TouchableOpacity>
+        <Text className="text-center">You can change this later in the settings</Text>
       </Animated.View>
     </SafeAreaView>
   );
 }
-
-// ORIGINAL STYLES (COMMENTED OUT FOR REFERENCE)
-/*
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    marginBottom: 32,
-  },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: Colors.primary + '10',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.primary + '20',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold' as const,
-    color: Colors.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 48,
-    textAlign: 'center',
-  },
-  languageList: {
-    width: '100%',
-    maxWidth: 400,
-    gap: 16,
-    marginBottom: 32,
-  },
-  languageCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: Colors.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  languageCardSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  languageInfo: {
-    flex: 1,
-  },
-  languageName: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  languageNameSelected: {
-    color: Colors.white,
-  },
-  languageSubname: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  languageSubnameSelected: {
-    color: Colors.white,
-    opacity: 0.9,
-  },
-  checkContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  continueButton: {
-    backgroundColor: Colors.secondary,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  continueButtonText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-  },
-});
-*/

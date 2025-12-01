@@ -8,7 +8,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@/integrations/supabase/products";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { router, useRouter } from "expo-router";
 import { Bell, Heart, Search } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,11 +38,12 @@ const HomeScreenHeader = ({
     <>
       {/* Deals/Promo Section */}
       <View className="py-4 px-4">
-        <Text className="text-text text-2xl font-bold">{t("home.under15k")} 15k</Text>
+        {/* <Text className="text-text text-2xl font-bold">{t("home.under15k")} 15k</Text> */}
         {isFeaturedLoading ? (
           <DealsCarouselSkeleton />
         ) : (
-          <DealsCarousel products={featuredProducts} />
+          // <DealsCarousel products={featuredProducts} />
+          <DealsCarousel />
         )}
       </View>
 
@@ -50,7 +51,7 @@ const HomeScreenHeader = ({
       <View className="pt-2 pb-3 px-4">
         <View className="flex-row justify-between items-center">
           <Text className="text-text text-2xl font-bold">{t("home.new")}</Text>
-          <TouchableOpacity onPress={() => {}}>
+          <TouchableOpacity onPress={() => router.push("/products" as any)}>
             <Text className="text-[#6C5CE7] text-base font-semibold">
               See All
             </Text>

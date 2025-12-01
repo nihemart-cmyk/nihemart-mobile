@@ -23,6 +23,8 @@ export default {
     continue: "Continue",
     english: "English",
     kinyarwanda: "Kinyarwanda",
+    nativeEnglish: "English",
+    nativeKinyarwanda: "Kinyarwanda",
   },
 
   tabs: {
