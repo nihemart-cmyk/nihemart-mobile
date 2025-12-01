@@ -1,10 +1,10 @@
+import Flag from "@/components/Flag";
 import Colors from "@/constants/colors";
 import i18n from "@/locales/i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Check, Globe } from "lucide-react-native";
-import React from "react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Animated, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -54,13 +54,11 @@ export default function LanguageSelectScreen() {
       code: "en" as Language,
       name: t("languageSelection.english"),
       nativeName: t("languageSelection.nativeEnglish"),
-      flag: "🇬🇧",
     },
     {
       code: "rw" as Language,
       name: t("languageSelection.kinyarwanda"),
       nativeName: t("languageSelection.nativeKinyarwanda"),
-      flag: "🇷🇼",
     },
   ];
 
@@ -119,7 +117,9 @@ export default function LanguageSelectScreen() {
                 }}
               >
                 <View className="flex-row items-center flex-1">
-                  <Text className="text-3xl mr-4">{language.flag}</Text>
+                  <View style={{ marginRight: 12 }}>
+                    <Flag code={language.code} size={36} />
+                  </View>
                   <View className="flex-1">
                     <Text
                       className="text-lg font-semibold mb-0.5"
@@ -157,16 +157,21 @@ export default function LanguageSelectScreen() {
         <TouchableOpacity
           onPress={handleContinue}
           activeOpacity={0.8}
-          className="items-center rounded-2xl py-3 px-16"
+          className="items-center rounded-2xl py-3 "
           style={{
             backgroundColor: Colors.secondary,
           }}
         >
-          <Text className="text-lg font-semibold" style={{ color: Colors.white }}>
+          <Text
+            className="text-lg font-semibold"
+            style={{ color: Colors.white }}
+          >
             {t("languageSelection.continue")}
           </Text>
         </TouchableOpacity>
-        <Text className="text-center">You can change this later in the settings</Text>
+        <Text className="text-center">
+          You can change this later in the settings
+        </Text>
       </Animated.View>
     </SafeAreaView>
   );

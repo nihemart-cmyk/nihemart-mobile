@@ -224,7 +224,7 @@ export default function HomeScreen() {
           onEndReachedThreshold={0.5}
           renderItem={({ item: product }) => (
             <TouchableOpacity
-              className="flex-1 m-2 mb-4 bg-white rounded-2xl overflow-hidden"
+              className="flex-1 m-2 mb-4 bg-white rounded-xl overflow-hidden"
               style={{
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
@@ -244,11 +244,11 @@ export default function HomeScreen() {
                   className="w-full h-36"
                   contentFit="cover"
                 />
-                <TouchableOpacity className="absolute top-3 right-3 w-10 h-10 bg-white/90 rounded-full items-center justify-center">
+                <TouchableOpacity className="absolute top-2 right-2 w-10 h-10 bg-white/90 rounded-lg items-center justify-center">
                   <Heart size={18} color="#999" strokeWidth={2} />
                 </TouchableOpacity>
               </View>
-              <View className="p-3">
+              <View className="p-1">
                 <Text className="text-text text-lg font-bold" numberOfLines={1}>
                   {product.name}
                 </Text>
@@ -258,7 +258,7 @@ export default function HomeScreen() {
                 >
                   Brand Name
                 </Text> */}
-                <Text className="text-primary text-base font-bold mt-1">
+                <Text className="text-primary text-base font-bold">
                   FRW {product.price}
                 </Text>
               </View>
