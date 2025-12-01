@@ -100,10 +100,10 @@ export default function AllProductsScreen() {
                   </Text>
                </View>
             )}
-         <View className="p-3">
+         <View className="p-2">
             <Text
-               className="text-text text-sm mb-2 h-10"
-               numberOfLines={2}
+               className="text-text text-sm mb-1"
+               numberOfLines={1}
             >
                {product.name}
             </Text>
