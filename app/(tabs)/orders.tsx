@@ -289,22 +289,23 @@ export default function OrdersScreen() {
                   </View>
                )}
 
-               {!userOrdersQ.isLoading && orders.length === 0 && search.trim() && (
-                  <View className="py-12 items-center justify-center">
-                     <Package
-                        size={40}
-                        color={Colors.textSecondary}
-                     />
-                     <Text className="mt-3 text-sm font-semibold text-text">
-                        No orders match your search
-                     </Text>
-                     <Text className="mt-1 text-xs text-textSecondary text-center">
-                        Try a different status filter or keyword.
-                     </Text>
-                  </View>
-               )}
+               {!userOrdersQ.isLoading &&
+                  orders.length === 0 &&
+                  search.trim() && (
+                     <View className="py-12 items-center justify-center">
+                        <Package
+                           size={40}
+                           color={Colors.textSecondary}
+                        />
+                        <Text className="mt-3 text-sm font-semibold text-text">
+                           No orders match your search
+                        </Text>
+                        <Text className="mt-1 text-xs text-textSecondary text-center">
+                           Try a different status filter or keyword.
+                        </Text>
+                     </View>
+                  )}
 
-               {orders.map((order) => (
                {orders.map((order) => (
                   <View
                      key={order.id}
