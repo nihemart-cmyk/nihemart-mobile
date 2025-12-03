@@ -1210,11 +1210,13 @@ export async function createOrder({
          throw new Error("Invalid order data provided");
       }
 
-      // Server-side enforcement: when orders are effectively disabled (either
-      // explicitly by admin or by the off-hours schedule), require the client
-      // to provide a requested delivery_time that falls on the next calendar
-      // day in Kigali local time. This prevents clients from bypassing the
-      // client-side guard.
+      // Server-side awareness of orders_enabled / schedule-based disabling.
+      // For mobile we mirror the web behaviour: during non-working hours or
+      // when the admin has temporarily disabled orders, we still allow orders
+      // to be created as long as the client has collected an explicit
+      // confirmation from the customer (e.g. a checkbox) and, optionally,
+      // schedule notes. We do **not** hard‑require a delivery_time here so
+      // that both web and mobile share the same behaviour.
       try {
          // Fetch admin setting if present
          const { data: ss, error: ssErr } = await sb
@@ -1235,11 +1237,6 @@ export async function createOrder({
          const nowMs = Date.now();
          const kigaliMs = nowMs + OFFSET_MS;
          const kigaliDate = new Date(kigaliMs);
-         const kYear = kigaliDate.getUTCFullYear();
-         const kMonth = kigaliDate.getUTCMonth();
-         const kDate = kigaliDate.getUTCDate();
-
-         // Determine schedule-based disabled window (21:30-09:00)
          const kHour = kigaliDate.getUTCHours();
          const kMinute = kigaliDate.getUTCMinutes();
          const minuteOfDay = kHour * 60 + kMinute;
@@ -1251,52 +1248,13 @@ export async function createOrder({
          const enabled =
             adminEnabled !== null ? Boolean(adminEnabled) : !scheduleDisabled;
 
+         // Orders can proceed with checkbox confirmation during non-working hours.
+         // No delivery_time validation required here; any optional delivery_time
+         // or schedule_notes fields are passed through as-is.
          if (!enabled) {
-            // Must provide delivery_time
-            const dt = (order as any).delivery_time;
-            if (!dt) {
-               const e: any = new Error(
-                  "Delivery time required when orders are disabled"
-               );
-               e.code = "ORDERS_NEED_DELIVERY_TIME";
-               throw e;
-            }
-            const parsed = new Date(dt);
-            if (isNaN(parsed.getTime())) {
-               const e: any = new Error("Invalid delivery_time format");
-               e.code = "ORDERS_INVALID_DELIVERY_TIME";
-               throw e;
-            }
-
-            // Convert provided timestamp to Kigali local calendar date by adding offset
-            const deliveryKigaliMs = parsed.getTime() + OFFSET_MS;
-            const deliveryKigali = new Date(deliveryKigaliMs);
-            const dYear = deliveryKigali.getUTCFullYear();
-            const dMonth = deliveryKigali.getUTCMonth();
-            const dDate = deliveryKigali.getUTCDate();
-
-            // Tomorrow's Kigali local date
-            const tomorrowKigaliUtcMs = Date.UTC(
-               kYear,
-               kMonth,
-               kDate + 1,
-               0,
-               0,
-               0,
-               0
-            );
-            const tomorrow = new Date(tomorrowKigaliUtcMs);
-            const tYear = tomorrow.getUTCFullYear();
-            const tMonth = tomorrow.getUTCMonth();
-            const tDate = tomorrow.getUTCDate();
-
-            if (!(dYear === tYear && dMonth === tMonth && dDate === tDate)) {
-               const e: any = new Error(
-                  "Delivery time must be for the next calendar day (Kigali local time)"
-               );
-               e.code = "ORDERS_DELIVERY_TIME_NOT_NEXT_DAY";
-               throw e;
-            }
+            // Intentionally no hard validation – the client is responsible for
+            // collecting confirmation / notes and the DB layer simply stores
+            // the provided metadata.
          }
       } catch (svErr) {
          // If this is a structured validation error, rethrow to be handled by outer catch

@@ -44,8 +44,16 @@ export default function CartScreen() {
    const { t } = useTranslation();
    const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
 
-   // Orders feature flag from server: when false, customers cannot place orders
-   const [ordersEnabled, setOrdersEnabled] = useState<boolean | null>(null);
+   // Orders feature flags from server: admin-controlled vs schedule-controlled
+   // Mirrors web behaviour:
+   // - adminEnabled === false  -> admin explicitly disabled orders (block checkout)
+   // - adminEnabled === true   -> admin explicitly enabled orders (allow checkout)
+   // - adminEnabled === null   -> schedule controls availability; users MAY proceed
+   //   to checkout during non-working hours to place next-day orders.
+   const [adminEnabled, setAdminEnabled] = useState<boolean | null>(null);
+   const [scheduleDisabled, setScheduleDisabled] = useState<boolean | null>(
+      null
+   );
    const [ordersDisabledMessage, setOrdersDisabledMessage] = useState<
       string | null
    >(null);
@@ -61,12 +69,22 @@ export default function CartScreen() {
             if (!res.ok) throw new Error("Failed to fetch setting");
             const json = await res.json();
             if (!mounted) return;
-            setOrdersEnabled(Boolean(json.enabled));
+            setAdminEnabled(
+               typeof json.adminEnabled === "undefined"
+                  ? null
+                  : json.adminEnabled
+            );
+            setScheduleDisabled(
+               typeof json.scheduleDisabled === "undefined"
+                  ? null
+                  : Boolean(json.scheduleDisabled)
+            );
             setOrdersDisabledMessage(json.message || null);
          } catch (err) {
             console.warn("Failed to load orders_enabled setting", err);
             if (!mounted) return;
-            setOrdersEnabled(null);
+            setAdminEnabled(null);
+            setScheduleDisabled(null);
          }
       };
 
@@ -89,13 +107,8 @@ export default function CartScreen() {
                (payload: any) => {
                   try {
                      const val = payload?.new?.value ?? payload?.old?.value;
-                     const enabled =
-                        val === true ||
-                        String(val) === "true" ||
-                        (val && val === "true");
-                     setOrdersEnabled(Boolean(enabled));
-                     if (payload?.new?.message)
-                        setOrdersDisabledMessage(payload.new.message);
+                     // On any change, refetch canonical state like web does
+                     fetchOrdersEnabled();
                   } catch (e) {
                      // ignore
                   }
@@ -146,6 +159,8 @@ export default function CartScreen() {
          },
       ]);
    };
+
+   const uniqueProductCount = cart.length;
 
    if (cart.length === 0) {
       return (
@@ -205,13 +220,20 @@ export default function CartScreen() {
                      className="text-[#1A2332] text-3xl font-bold"
                      style={{ fontFamily: Fonts.bold }}
                   >
-                     My Cart
+                     {t("cart.title")}
                   </Text>
                   <Text
                      className="text-[#64748B] text-sm mt-1"
                      style={{ fontFamily: Fonts.medium }}
                   >
-                     {cart.length} {cart.length === 1 ? "item" : "items"}
+                     {t("cart.text")}
+                  </Text>
+                  <Text
+                     className="text-[#64748B] text-xs mt-1"
+                     style={{ fontFamily: Fonts.medium }}
+                  >
+                     {t("cart.help")}{" "}
+                     <Text className="text-[#00A6E0]">0792412177</Text>
                   </Text>
                </View>
                <View className="w-12 h-12 rounded-full bg-[#F8FAFB] items-center justify-center">
@@ -228,6 +250,19 @@ export default function CartScreen() {
                contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
                showsVerticalScrollIndicator={false}
             >
+               {/* Small badge with product count */}
+               <View className="mb-3">
+                  <Text
+                     className="text-[11px] text-[#64748B] bg-[#E5F3FF] px-2 py-1 rounded-full self-start"
+                     style={{ fontFamily: Fonts.medium }}
+                  >
+                     {uniqueProductCount}{" "}
+                     {uniqueProductCount === 1
+                        ? t("cart.productLabel")
+                        : t("cart.productsLabel")}
+                  </Text>
+               </View>
+
                {cart.map((item, index) => (
                   <View
                      key={item.product.id}
@@ -317,6 +352,26 @@ export default function CartScreen() {
                               />
                            </TouchableOpacity>
                         </View>
+
+                        {/* Item Total */}
+                        <View className="mt-2 pt-2 border-t border-[#E2E8F0] flex-row justify-between items-center">
+                           <Text
+                              className="text-[11px] text-[#64748B]"
+                              style={{ fontFamily: Fonts.medium }}
+                           >
+                              {t("cart.itemTotalLabel")}
+                           </Text>
+                           <Text
+                              className="text-sm font-semibold text-[#1A2332]"
+                              style={{ fontFamily: Fonts.semiBold || Fonts.bold }}
+                           >
+                              {((item.product.discountPrice ||
+                                 item.product.price) *
+                                 item.quantity
+                              ).toLocaleString()}{" "}
+                              RWF
+                           </Text>
+                        </View>
                      </View>
 
                      {/* Remove Button */}
@@ -377,14 +432,23 @@ export default function CartScreen() {
                </View>
 
                {/* Checkout Button */}
+               {adminEnabled === false && (
+                  <View className="mb-2 px-2 py-1 rounded-lg bg-red-50 border border-red-200">
+                     <Text className="text-[11px] text-red-700">
+                        {ordersDisabledMessage ||
+                           t("checkout.ordersDisabledMessage")}
+                     </Text>
+                  </View>
+               )}
+
                <TouchableOpacity
                   className={`flex-row py-[18px] rounded-2xl items-center justify-center gap-2 shadow-lg ${
-                     ordersEnabled === false
+                     adminEnabled === false
                         ? "bg-orange-300 opacity-60"
                         : "bg-orange-500"
                   } ${isPlacingOrder && "opacity-60"}`}
                   onPress={handleCheckout}
-                  disabled={isPlacingOrder}
+                  disabled={isPlacingOrder || adminEnabled === false}
                   activeOpacity={0.8}
                >
                   <Text
@@ -404,12 +468,13 @@ export default function CartScreen() {
                   )}
                </TouchableOpacity>
 
-               {/* Show warning if orders disabled */}
-               {ordersEnabled === false && (
+               {/* Show warning when orders are disabled by schedule/admin */}
+               {((adminEnabled === false && !!ordersDisabledMessage) ||
+                  (adminEnabled === null && scheduleDisabled)) && (
                   <View className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                      <Text className="text-yellow-900 text-xs font-medium">
                         {ordersDisabledMessage ||
-                           "We are currently not allowing orders. You can still proceed to checkout to schedule a delivery for tomorrow."}
+                           t("checkout.ordersDisabledBanner")}
                      </Text>
                   </View>
                )}

@@ -143,13 +143,13 @@ export default function PaymentMethodSelector({
       method: "mtn_momo" | "airtel_money" | null;
    }>({ isOpen: false, method: null });
 
-   // Payment options - only cash_on_delivery is enabled, others commented out like web
+   // Payment options - match web implementation
    const paymentOptions: (keyof typeof PAYMENT_METHODS | "cash_on_delivery")[] =
       [
-         // 'mtn_momo',
-         // 'airtel_money',
-         // 'visa_card',
-         // 'mastercard',
+         "mtn_momo",
+         "airtel_money",
+         "visa_card",
+         "mastercard",
          // 'spenn', // Temporarily disabled - not supported by KPay (error 609)
          "cash_on_delivery",
       ];

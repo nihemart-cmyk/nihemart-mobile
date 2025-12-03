@@ -1,7 +1,7 @@
 import Colors from "@/constants/colors";
 import { useOrders } from "@/hooks/useOrders";
 import useRequireAuth from "@/hooks/useRequireAuth";
-import { Order } from "@/types/orders";
+import { Order, OrderQueryOptions, OrderStatus } from "@/types/orders";
 import { Stack } from "expo-router";
 import {
    CheckCircle,
@@ -11,16 +11,44 @@ import {
    Truck,
    XCircle,
 } from "lucide-react-native";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+   ActivityIndicator,
+   ScrollView,
+   Text,
+   TextInput,
+   TouchableOpacity,
+   View,
+} from "react-native";
 
 export default function OrdersScreen() {
    const { loading: authLoading } = useRequireAuth();
    const ordersHook = useOrders();
-   const userOrdersQ = ordersHook.useUserOrders();
    const router = useRouter();
 
+   const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all");
+   const [search, setSearch] = useState("");
+
+   const queryOptions: OrderQueryOptions = useMemo(
+      () => ({
+         filters: {
+            status: statusFilter === "all" ? undefined : statusFilter,
+            search: search.trim() || undefined,
+         },
+         pagination: {
+            page: 1,
+            limit: 20,
+         },
+         sort: {
+            column: "created_at",
+            direction: "desc",
+         },
+      }),
+      [statusFilter, search]
+   );
+
+   const userOrdersQ = ordersHook.useUserOrders(queryOptions);
    const orders = userOrdersQ?.data?.data || [];
 
    if (authLoading) return null;
@@ -162,7 +190,7 @@ export default function OrdersScreen() {
       });
    };
 
-   if (!userOrdersQ.isLoading && orders.length === 0) {
+   if (!userOrdersQ.isLoading && orders.length === 0 && !search.trim()) {
       return (
          <>
             <Stack.Screen options={{ title: "My Orders" }} />
@@ -190,6 +218,93 @@ export default function OrdersScreen() {
             showsVerticalScrollIndicator={false}
          >
             <View className="p-4">
+               {/* Search + Status Filters */}
+               <View className="mb-4">
+                  <View className="mb-3">
+                     <Text className="text-sm font-semibold text-text mb-1">
+                        Search orders
+                     </Text>
+                     <TextInput
+                        value={search}
+                        onChangeText={setSearch}
+                        placeholder="Search by order number, email or product..."
+                        placeholderTextColor={Colors.textSecondary}
+                        className="bg-white border border-border rounded-lg px-3 py-2 text-sm text-text"
+                     />
+                  </View>
+
+                  <ScrollView
+                     horizontal
+                     showsHorizontalScrollIndicator={false}
+                     className="mt-1"
+                  >
+                     {(
+                        [
+                           { key: "all", label: "All" },
+                           { key: "pending", label: "Pending" },
+                           { key: "processing", label: "Processing" },
+                           { key: "assigned", label: "Assigned" },
+                           { key: "shipped", label: "Shipped" },
+                           { key: "delivered", label: "Delivered" },
+                           { key: "cancelled", label: "Cancelled" },
+                           { key: "refunded", label: "Refunded" },
+                        ] as { key: "all" | OrderStatus; label: string }[]
+                     ).map((chip) => {
+                        const isActive = statusFilter === chip.key;
+                        return (
+                           <TouchableOpacity
+                              key={chip.key}
+                              onPress={() => setStatusFilter(chip.key)}
+                              className={`mr-2 mb-2 px-3 py-1.5 rounded-full border ${
+                                 isActive
+                                    ? "bg-primary border-primary"
+                                    : "bg-white border-border"
+                              }`}
+                           >
+                              <Text
+                                 className="text-xs font-semibold"
+                                 style={{
+                                    color: isActive
+                                       ? "#ffffff"
+                                       : Colors.textSecondary,
+                                 }}
+                              >
+                                 {chip.label}
+                              </Text>
+                           </TouchableOpacity>
+                        );
+                     })}
+                  </ScrollView>
+               </View>
+
+               {userOrdersQ.isLoading && (
+                  <View className="py-12 items-center justify-center">
+                     <ActivityIndicator
+                        size="small"
+                        color={Colors.primary}
+                     />
+                     <Text className="mt-2 text-xs text-textSecondary">
+                        Loading your orders...
+                     </Text>
+                  </View>
+               )}
+
+               {!userOrdersQ.isLoading && orders.length === 0 && search.trim() && (
+                  <View className="py-12 items-center justify-center">
+                     <Package
+                        size={40}
+                        color={Colors.textSecondary}
+                     />
+                     <Text className="mt-3 text-sm font-semibold text-text">
+                        No orders match your search
+                     </Text>
+                     <Text className="mt-1 text-xs text-textSecondary text-center">
+                        Try a different status filter or keyword.
+                     </Text>
+                  </View>
+               )}
+
+               {orders.map((order) => (
                {orders.map((order) => (
                   <View
                      key={order.id}

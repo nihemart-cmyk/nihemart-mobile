@@ -26,6 +26,8 @@ import {
    Phone,
    User as UserIcon,
    MessageCircle,
+   CreditCard,
+   Smartphone,
 } from "lucide-react-native";
 import toast from "@/utils/toast";
 
@@ -206,6 +208,45 @@ export default function OrderDetailScreen() {
    const [refundReason, setRefundReason] = useState("");
    const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+   const getPaymentMethodLabel = (method?: string | null) => {
+      if (!method) return "Not set";
+      const map: Record<string, string> = {
+         mtn_momo: "MTN Mobile Money",
+         airtel_money: "Airtel Money",
+         visa_card: "Visa Card",
+         mastercard: "MasterCard",
+         spenn: "SPENN",
+         cash_on_delivery: "Cash on Delivery",
+      };
+      return map[method] || method.replace(/_/g, " ");
+   };
+
+   const getPaymentMethodIcon = (method?: string | null) => {
+      const m = method || "";
+      if (m.includes("mtn") || m.includes("momo") || m.includes("airtel")) {
+         return (
+            <Smartphone
+               size={18}
+               color={Colors.primary}
+            />
+         );
+      }
+      if (m === "cash_on_delivery") {
+         return (
+            <Package
+               size={18}
+               color={Colors.secondary}
+            />
+         );
+      }
+      return (
+         <CreditCard
+            size={18}
+            color={Colors.primary}
+         />
+      );
+   };
 
    const handleStatusUpdate = async (newStatus: string) => {
       if (isUpdatingStatus) return;
@@ -638,6 +679,51 @@ export default function OrderDetailScreen() {
                         {order.delivery_notes}
                      </Text>
                   </View>
+               )}
+            </View>
+
+            {/* Payment Information Card */}
+            <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+               <Text className="text-lg font-bold text-text mb-3">
+                  Payment Information
+               </Text>
+               <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-row items-center gap-2">
+                     {getPaymentMethodIcon(order.payment_method)}
+                     <Text className="text-sm font-medium text-text">
+                        {getPaymentMethodLabel(order.payment_method)}
+                     </Text>
+                  </View>
+                  <View
+                     className="px-2 py-1 rounded-full"
+                     style={{
+                        backgroundColor: (order.is_paid
+                           ? Colors.success
+                           : Colors.warning) + "20",
+                     }}
+                  >
+                     <Text
+                        className="text-xs font-semibold"
+                        style={{
+                           color: order.is_paid
+                              ? Colors.success
+                              : Colors.warning,
+                        }}
+                     >
+                        {order.is_paid ? "Paid" : "Pending"}
+                     </Text>
+                  </View>
+               </View>
+               <View className="flex-row justify-between mt-1">
+                  <Text className="text-xs text-textSecondary">Amount</Text>
+                  <Text className="text-xs font-semibold text-text">
+                     RWF {Number(order.total || 0).toLocaleString()}
+                  </Text>
+               </View>
+               {order.currency && (
+                  <Text className="text-[11px] text-textSecondary mt-2">
+                     Currency: {order.currency}
+                  </Text>
                )}
             </View>
 

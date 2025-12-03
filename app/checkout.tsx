@@ -74,45 +74,18 @@ const CheckoutScreen = ({
    const [paymentInProgress, setPaymentInProgress] = useState(false);
    const [errors, setErrors] = useState<Record<string, string>>({});
    const [ordersEnabled, setOrdersEnabled] = useState<boolean | null>(null);
-   const [deliveryTime, setDeliveryTime] = useState<string | null>(null);
-
-   const formatLocalDateTimeForInput = (d: Date) => {
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const yyyy = d.getFullYear();
-      const mm = pad(d.getMonth() + 1);
-      const dd = pad(d.getDate());
-      const hh = pad(d.getHours());
-      const min = pad(d.getMinutes());
-      return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-   };
-
-   const nextDayMinLocal = (() => {
-      const now = new Date();
-      const tomorrow = new Date(
-         now.getFullYear(),
-         now.getMonth(),
-         now.getDate() + 1,
-         0,
-         0,
-         0,
-         0
-      );
-      return formatLocalDateTimeForInput(tomorrow);
-   })();
-
-   const nextDayMaxLocal = (() => {
-      const now = new Date();
-      const tomorrowEnd = new Date(
-         now.getFullYear(),
-         now.getMonth(),
-         now.getDate() + 1,
-         23,
-         59,
-         0,
-         0
-      );
-      return formatLocalDateTimeForInput(tomorrowEnd);
-   })();
+   // Guest checkout fields – used when the user is not logged in
+   const [guestEmail, setGuestEmail] = useState("");
+   const [guestFirstName, setGuestFirstName] = useState("");
+   const [guestLastName, setGuestLastName] = useState("");
+   const [guestAddressLine, setGuestAddressLine] = useState("");
+   const [guestCity, setGuestCity] = useState("");
+   const [guestPhone, setGuestPhone] = useState("");
+   // When orders are disabled by schedule, require a one‑time confirmation
+   // from the customer that delivery can happen the next working day. Notes
+   // are optional, mirroring the web checkout behaviour.
+   const [scheduleConfirmChecked, setScheduleConfirmChecked] = useState(false);
+   const [scheduleNotes, setScheduleNotes] = useState<string>("");
 
    const {
       initiatePayment,
@@ -191,20 +164,6 @@ const CheckoutScreen = ({
       };
    }, []);
 
-   // If not logged in, redirect
-   if (!authLoading && !isLoggedIn && !isRetryMode) {
-      router.replace("/signin");
-      return (
-         <View className="flex-1 items-center justify-center">
-            <ActivityIndicator
-               size="large"
-               color="#ff6b35"
-            />
-            <Text className="text-gray-600 mt-4">Redirecting...</Text>
-         </View>
-      );
-   }
-
    if (authLoading) {
       return (
          <View className="flex-1 items-center justify-center">
@@ -276,12 +235,19 @@ const CheckoutScreen = ({
    const transport = 2000;
    const total = subtotal + transport;
 
-   // Get customer info
-   const fullName = profile?.full_name ?? user?.user_metadata?.full_name ?? "";
-   const nameParts = fullName.trim().split(" ").filter(Boolean);
-   const customerEmail = user?.email || "";
-   const customerFirstName = nameParts[0] || "";
-   const customerLastName = nameParts.slice(1).join(" ") || "";
+  // Get customer info – prefer authenticated profile, otherwise guest fields
+  const fullNameFromProfile =
+     profile?.full_name ?? user?.user_metadata?.full_name ?? "";
+  const profileNameParts = fullNameFromProfile
+     .trim()
+     .split(" ")
+     .filter(Boolean);
+  const profileFirstName = profileNameParts[0] || "";
+  const profileLastName = profileNameParts.slice(1).join(" ") || "";
+
+  const customerFirstName = isLoggedIn ? profileFirstName : guestFirstName;
+  const customerLastName = isLoggedIn ? profileLastName : guestLastName;
+  const customerEmail = isLoggedIn ? user?.email || "" : guestEmail;
 
    const getAddressDisplayText = (address: Address) => {
       const parts = [
@@ -292,75 +258,88 @@ const CheckoutScreen = ({
       return parts.length > 0 ? parts.join(", ") : address.display_name || "";
    };
 
-   const validateCheckout = () => {
-      const newErrors: Record<string, string> = {};
+  const validateCheckout = () => {
+     const newErrors: Record<string, string> = {};
 
-      if (
-         !customerEmail ||
-         !/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(customerEmail)
-      ) {
-         newErrors.email = "Please ensure your email is valid";
-      }
+     if (
+        !customerEmail ||
+        !/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(customerEmail)
+     ) {
+        newErrors.email = "Please ensure your email is valid";
+     }
 
-      if (!selectedAddress) {
-         newErrors.address = "Please select a delivery address";
-      } else if (!selectedAddress.phone) {
-         newErrors.phone = "Please ensure your address has a phone number";
-      }
+     if (isLoggedIn) {
+        if (!selectedAddress) {
+           newErrors.address = "Please select a delivery address";
+        } else if (!selectedAddress.phone) {
+           newErrors.phone = "Please ensure your address has a phone number";
+        }
+     } else {
+        if (!guestAddressLine || !guestCity) {
+           newErrors.address = "Please enter your delivery address and city";
+        }
+        if (!guestPhone) {
+           newErrors.phone = "Please enter a phone number for delivery";
+        }
+     }
 
-      // If orders are disabled, require a delivery time
-      if (ordersEnabled === false && !deliveryTime) {
-         newErrors.deliveryTime = "Please choose a delivery time for next day";
+      // If orders are disabled by schedule, require explicit confirmation
+      if (ordersEnabled === false && !scheduleConfirmChecked) {
+         newErrors.scheduleConfirm =
+            "Please confirm this order can be delivered tomorrow during working hours";
       }
 
       return newErrors;
    };
 
-   const handleCreateOrder = async () => {
-      if (isSubmitting || paymentInProgress) return;
+  const handleCreateOrder = async () => {
+     if (isSubmitting || paymentInProgress) return;
 
-      const formErrors = validateCheckout();
-      if (Object.keys(formErrors).length > 0) {
-         setErrors(formErrors);
-         toast.error("Please fix the errors and try again");
-         return;
-      }
+     const formErrors = validateCheckout();
+     if (Object.keys(formErrors).length > 0) {
+        setErrors(formErrors);
+        toast.error("Please fix the errors and try again");
+        return;
+     }
 
-      if (!isLoggedIn) {
-         toast.error("Please login to place order");
-         router.push("/signin" as any);
-         return;
-      }
-
-      if (orderItems.length === 0 || !selectedAddress || !user) {
-         toast.error("Missing required information");
-         return;
-      }
+     if (orderItems.length === 0) {
+        toast.error("Missing required information");
+        return;
+     }
 
       setIsSubmitting(true);
       setErrors({});
 
       try {
-         const deliveryAddress = getAddressDisplayText(selectedAddress);
-         const deliveryCity = selectedAddress.city || "";
+         const deliveryAddress =
+            isLoggedIn && selectedAddress
+               ? getAddressDisplayText(selectedAddress)
+               : guestAddressLine;
+         const deliveryCity =
+            isLoggedIn && selectedAddress ? selectedAddress.city || "" : guestCity;
+         const customerPhone =
+            isLoggedIn && selectedAddress
+               ? selectedAddress.phone || ""
+               : guestPhone || "";
 
          const orderData = {
             order: {
-               user_id: user.id,
+               // user_id is optional so that guest users can also place orders
+               user_id: user?.id || undefined,
                subtotal: subtotal,
                tax: transport,
                total: total,
                customer_email: customerEmail.trim(),
                customer_first_name: customerFirstName.trim(),
                customer_last_name: customerLastName.trim(),
-               customer_phone: selectedAddress.phone || "",
+               customer_phone: customerPhone,
                delivery_address: deliveryAddress,
                delivery_city: deliveryCity,
                status: "pending" as const,
                payment_method: paymentMethod || "cash_on_delivery",
                delivery_notes: deliveryNotes.trim() || undefined,
-               ...(deliveryTime
-                  ? { delivery_time: new Date(deliveryTime).toISOString() }
+               ...(ordersEnabled === false && scheduleConfirmChecked && scheduleNotes.trim()
+                  ? { schedule_notes: scheduleNotes.trim() }
                   : {}),
             },
             items: orderItems.map((item) => ({
@@ -383,7 +362,16 @@ const CheckoutScreen = ({
                   toast.success(
                      `Order #${createdOrder.order_number} created successfully!`
                   );
-                  router.push("/orders" as any);
+                  const orderId =
+                     createdOrder?.id || createdOrder?.order_id || null;
+
+                  if (isLoggedIn && orderId) {
+                     router.push(`/orders/${orderId}` as any);
+                  } else {
+                     // Guest users are taken to a simple thank-you screen,
+                     // mirroring the web experience.
+                     router.push("/thank-you" as any);
+                  }
                },
                onError: (error: any) => {
                   toast.error(
@@ -399,12 +387,17 @@ const CheckoutScreen = ({
             try {
                setPaymentInProgress(true);
 
+               const basePhone =
+                  isLoggedIn && selectedAddress
+                     ? selectedAddress.phone || ""
+                     : guestPhone || "";
+
                const customerPhone =
                   paymentMethod === "mtn_momo" ||
                   paymentMethod === "airtel_money"
                      ? mobileMoneyPhones[paymentMethod] ||
-                       formatPhoneNumber(selectedAddress?.phone || "")
-                     : formatPhoneNumber(selectedAddress?.phone || "");
+                       formatPhoneNumber(basePhone)
+                     : formatPhoneNumber(basePhone);
 
                const customerFullName =
                   `${customerFirstName} ${customerLastName}`.trim();
@@ -529,36 +522,85 @@ const CheckoutScreen = ({
 
                {/* Customer Info Section */}
                <View className="bg-white rounded-lg p-4 shadow-sm">
-                  <View className="mb-4">
-                     <Text className="text-sm font-medium text-gray-700 mb-2">
-                        Email
-                     </Text>
-                     <Text className="text-base text-gray-900">
-                        {customerEmail || "Not set"}
-                     </Text>
-                  </View>
-                  <View className="flex-row space-x-3">
-                     <View className="flex-1">
-                        <Text className="text-sm font-medium text-gray-700 mb-2">
-                           First Name
-                        </Text>
-                        <Text className="text-base text-gray-900">
-                           {customerFirstName || "Not set"}
-                        </Text>
-                     </View>
-                     <View className="flex-1">
-                        <Text className="text-sm font-medium text-gray-700 mb-2">
-                           Last Name
-                        </Text>
-                        <Text className="text-base text-gray-900">
-                           {customerLastName || "Not set"}
-                        </Text>
-                     </View>
-                  </View>
-                  {errors.email && (
-                     <Text className="text-red-500 text-xs mt-2">
-                        {errors.email}
-                     </Text>
+                  {isLoggedIn ? (
+                     <>
+                        <View className="mb-4">
+                           <Text className="text-sm font-medium text-gray-700 mb-2">
+                              Email
+                           </Text>
+                           <Text className="text-base text-gray-900">
+                              {customerEmail || "Not set"}
+                           </Text>
+                        </View>
+                        <View className="flex-row space-x-3">
+                           <View className="flex-1">
+                              <Text className="text-sm font-medium text-gray-700 mb-2">
+                                 First Name
+                              </Text>
+                              <Text className="text-base text-gray-900">
+                                 {customerFirstName || "Not set"}
+                              </Text>
+                           </View>
+                           <View className="flex-1">
+                              <Text className="text-sm font-medium text-gray-700 mb-2">
+                                 Last Name
+                              </Text>
+                              <Text className="text-base text-gray-900">
+                                 {customerLastName || "Not set"}
+                              </Text>
+                           </View>
+                        </View>
+                        {errors.email && (
+                           <Text className="text-red-500 text-xs mt-2">
+                              {errors.email}
+                           </Text>
+                        )}
+                     </>
+                  ) : (
+                     <>
+                        <View className="mb-4">
+                           <Text className="text-sm font-medium text-gray-700 mb-2">
+                              Email
+                           </Text>
+                           <TextInput
+                              value={guestEmail}
+                              onChangeText={setGuestEmail}
+                              placeholder="you@example.com"
+                              autoCapitalize="none"
+                              keyboardType="email-address"
+                              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                           />
+                           {errors.email && (
+                              <Text className="text-red-500 text-xs mt-2">
+                                 {errors.email}
+                              </Text>
+                           )}
+                        </View>
+                        <View className="flex-row space-x-3">
+                           <View className="flex-1">
+                              <Text className="text-sm font-medium text-gray-700 mb-2">
+                                 First Name
+                              </Text>
+                              <TextInput
+                                 value={guestFirstName}
+                                 onChangeText={setGuestFirstName}
+                                 placeholder="John"
+                                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                              />
+                           </View>
+                           <View className="flex-1">
+                              <Text className="text-sm font-medium text-gray-700 mb-2">
+                                 Last Name
+                              </Text>
+                              <TextInput
+                                 value={guestLastName}
+                                 onChangeText={setGuestLastName}
+                                 placeholder="Doe"
+                                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                              />
+                           </View>
+                        </View>
+                     </>
                   )}
                </View>
 
@@ -572,55 +614,122 @@ const CheckoutScreen = ({
                         {errors.address}
                      </Text>
                   )}
-                  <AddressSelector
-                     selectedAddress={selectedAddress}
-                     onSelectAddress={setSelectedAddress}
-                     showAddButton={true}
-                  />
+
+                  {isLoggedIn ? (
+                     <AddressSelector
+                        selectedAddress={selectedAddress}
+                        onSelectAddress={setSelectedAddress}
+                        showAddButton={true}
+                     />
+                  ) : (
+                     <View className="space-y-3">
+                        <View>
+                           <Text className="text-sm font-medium text-gray-700 mb-1">
+                              Street / House
+                           </Text>
+                           <TextInput
+                              value={guestAddressLine}
+                              onChangeText={setGuestAddressLine}
+                              placeholder="e.g. KG 123 St, House 5"
+                              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                           />
+                        </View>
+                        <View>
+                           <Text className="text-sm font-medium text-gray-700 mb-1">
+                              City
+                           </Text>
+                           <TextInput
+                              value={guestCity}
+                              onChangeText={setGuestCity}
+                              placeholder="Kigali"
+                              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                           />
+                        </View>
+                        <View>
+                           <Text className="text-sm font-medium text-gray-700 mb-1">
+                              Phone
+                           </Text>
+                           <TextInput
+                              value={guestPhone}
+                              onChangeText={setGuestPhone}
+                              placeholder="07xx xxx xxx"
+                              keyboardType="phone-pad"
+                              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                           />
+                           {errors.phone && (
+                              <Text className="text-red-500 text-xs mt-1">
+                                 {errors.phone}
+                              </Text>
+                           )}
+                        </View>
+                     </View>
+                  )}
                </View>
 
-               {/* Delivery Instructions */}
-               {/* Delivery Time Picker (shown when orders disabled) */}
+               {/* Schedule-based orders disabled banner & confirmation (mirrors web UX) */}
                {ordersEnabled === false && (
-                  <View className="bg-white rounded-lg p-4 shadow-sm border border-yellow-100">
-                     <Text className="text-lg font-medium text-gray-900 mb-3">
-                        Select Delivery Time
-                     </Text>
-                     <Text className="text-xs text-gray-600 mb-3">
-                        You may select any time on the next day. Admin will see
-                        the requested delivery time on the dashboard.
-                     </Text>
-                     <View className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                        <Text className="text-orange-700 text-xs font-medium">
-                           {deliveryTime
-                              ? `Time Selected: ${deliveryTime.substring(11, 16)}`
-                              : "Please select a delivery time below (next day, 00:00 - 23:59)"}
-                        </Text>
+                  <View className="bg-white rounded-lg p-4 shadow-sm border border-yellow-100 space-y-3">
+                     <View className="flex-row items-start">
+                        <AlertCircle
+                           className="text-yellow-600 mr-3"
+                           size={20}
+                        />
+                        <View className="flex-1">
+                           <Text className="text-sm font-medium text-yellow-900">
+                              We are not accepting regular deliveries right now
+                           </Text>
+                           <Text className="text-xs text-yellow-800 mt-1">
+                              Your order will be delivered tomorrow during working
+                              hours (9:30am - 9:00pm).
+                           </Text>
+                        </View>
                      </View>
-                     {errors.deliveryTime && (
-                        <Text className="text-red-500 text-xs mb-2">
-                           {errors.deliveryTime}
-                        </Text>
-                     )}
+
                      <TouchableOpacity
-                        onPress={() => {
-                           // Pre-select next day at 9 AM by default
-                           const tomorrow = new Date();
-                           tomorrow.setDate(tomorrow.getDate() + 1);
-                           tomorrow.setHours(9, 0, 0, 0);
-                           setDeliveryTime(
-                              tomorrow.toISOString().substring(0, 16)
-                           );
-                        }}
-                        className="bg-orange-500 rounded-lg py-2 flex-row items-center justify-center mb-2"
+                        onPress={() =>
+                           setScheduleConfirmChecked((prev) => !prev)
+                        }
+                        className="flex-row items-start mt-1"
                      >
-                        <Text className="text-white text-sm font-semibold">
-                           {deliveryTime ? "Change Time" : "Select Time"}
+                        <View
+                           className={`w-5 h-5 rounded border mr-2 mt-1 items-center justify-center ${
+                              scheduleConfirmChecked
+                                 ? "bg-orange-500 border-orange-500"
+                                 : "border-gray-300 bg-white"
+                           }`}
+                        >
+                           {scheduleConfirmChecked && (
+                              <CheckCircle2
+                                 size={14}
+                                 color="#ffffff"
+                              />
+                           )}
+                        </View>
+                        <Text className="flex-1 text-xs text-gray-800">
+                           I agree this order can be delivered tomorrow during
+                           working hours (9:30am - 9:00pm).
                         </Text>
                      </TouchableOpacity>
-                     <Text className="text-xs text-gray-500 text-center">
-                        Default: Next day at 9:00 AM
-                     </Text>
+
+                     {errors.scheduleConfirm && (
+                        <Text className="text-red-500 text-xs">
+                           {errors.scheduleConfirm}
+                        </Text>
+                     )}
+
+                     <View className="mt-1">
+                        <Text className="text-xs text-gray-700 mb-1">
+                           Notes (optional)
+                        </Text>
+                        <TextInput
+                           value={scheduleNotes}
+                           onChangeText={setScheduleNotes}
+                           placeholder="Any notes about preferred delivery time or special instructions for next-day delivery..."
+                           multiline
+                           numberOfLines={3}
+                           className="border border-yellow-200 rounded-lg px-3 py-2 text-xs text-gray-800"
+                        />
+                     </View>
                   </View>
                )}
 
