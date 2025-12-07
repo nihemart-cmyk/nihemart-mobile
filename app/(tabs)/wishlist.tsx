@@ -83,14 +83,14 @@ const Wishlist = () => {
         </View>
 
         <View style={styles.contentContainer}>
-          <Text style={styles.productName} numberOfLines={2}>
+          <Text style={styles.productName} numberOfLines={1}>
             {item.name}
           </Text>
 
-          <View style={styles.ratingContainer}>
+          {/* <View style={styles.ratingContainer}>
             <Text style={styles.rating}>★ {item.rating.toFixed(1)}</Text>
             <Text style={styles.reviews}>({item.reviews})</Text>
-          </View>
+          </View> */}
 
           <View style={styles.priceContainer}>
             <Text style={styles.price}>
@@ -134,12 +134,12 @@ const Wishlist = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* <View style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>{t("common.wishlist")}</Text>
         {wishlistItems.length > 0 && (
           <Text style={styles.itemCount}>{wishlistItems.length}</Text>
         )}
-      </View> */}
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: "100%",
-    height: cardWidth * 1.2,
+    height: cardWidth,
     backgroundColor: "#F5F5F5",
     position: "relative",
   },

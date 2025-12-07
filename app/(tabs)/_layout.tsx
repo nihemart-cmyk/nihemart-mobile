@@ -5,7 +5,7 @@ import { Tabs, useRouter } from "expo-router";
 import { Heart, Home, Truck, User } from "lucide-react-native";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, Dimensions } from "react-native";
+import { Dimensions, Platform } from "react-native";
 import "../../globals.css";
 
 // Modern NiheMart color palette
@@ -107,7 +107,9 @@ export default function TabLayout() {
               />
               <span
                 style={{
-                  color: focused ? NiheColors.primary : NiheColors.textSecondary,
+                  color: focused
+                    ? NiheColors.primary
+                    : NiheColors.textSecondary,
                 }}
               >
                 {/* {t("tabs.home")} */}
@@ -145,7 +147,9 @@ export default function TabLayout() {
               />
               <span
                 style={{
-                  color: focused ? NiheColors.primary : NiheColors.textSecondary,
+                  color: focused
+                    ? NiheColors.primary
+                    : NiheColors.textSecondary,
                 }}
               >
                 {/* {t("tabs.orders")} */}
@@ -158,6 +162,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="wishlist"
         options={{
+          headerShown: false,
           title: t("tabs.wishlist"),
           headerRight: () => <NotificationBell />,
           headerStyle: {
@@ -225,7 +230,9 @@ export default function TabLayout() {
               />
               <span
                 style={{
-                  color: focused ? NiheColors.primary : NiheColors.textSecondary,
+                  color: focused
+                    ? NiheColors.primary
+                    : NiheColors.textSecondary,
                 }}
               >
                 {/* {t("tabs.profile")} */}
