@@ -4,40 +4,39 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 
-// Placeholder image URLs - replace with actual images
 const onboardingData = [
   {
     id: "1",
     title: "Various Collections Of The Latest Products",
     description:
       "Urna amet, suspendisse ullamcorper ac elit diam facilisis cursus vestibulum.",
-    image: "https://via.placeholder.com/400x500/FFFFFF/FF6B35?text=Onboarding+1",
+    image: require("@/assets/images/1.webp"),
   },
   {
     id: "2",
     title: "Various Collections Of The Latest Products",
     description:
       "Urna amet, suspendisse ullamcorper ac elit diam facilisis cursus vestibulum.",
-    image: "https://via.placeholder.com/400x500/FFFFFF/FF6B35?text=Onboarding+2",
+    image: require("@/assets/images/2.webp"),
   },
   {
     id: "3",
     title: "Find The Most Suitable Outfit For You",
     description:
       "Urna amet, suspendisse ullamcorper ac elit diam facilisis cursus vestibulum.",
-    image: "https://via.placeholder.com/400x500/FFFFFF/FF6B35?text=Onboarding+3",
+    image: require("@/assets/images/3.webp"),
   },
 ];
 
@@ -52,7 +51,9 @@ export default function OnboardingScreen() {
   useEffect(() => {
     if (user) {
       const markOnboardingComplete = async () => {
-        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const AsyncStorage = (
+          await import("@react-native-async-storage/async-storage")
+        ).default;
         await AsyncStorage.setItem("hasCompletedOnboarding", "true");
         router.replace("/(tabs)");
       };
@@ -71,7 +72,9 @@ export default function OnboardingScreen() {
   };
 
   const handleGetStarted = async () => {
-    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    const AsyncStorage = (
+      await import("@react-native-async-storage/async-storage")
+    ).default;
     await AsyncStorage.setItem("hasCompletedOnboarding", "true");
     router.replace("/signin");
   };
@@ -80,17 +83,14 @@ export default function OnboardingScreen() {
     handleGetStarted();
   };
 
-  const renderItem = ({ item }: { item: typeof onboardingData[0] }) => {
+  const renderItem = ({ item }: { item: (typeof onboardingData)[0] }) => {
     return (
       <View style={styles.slide}>
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: item.image }}
+            source={item.image}
             style={styles.image}
             resizeMode="contain"
-            onError={() => {
-              console.log("Failed to load onboarding image:", item.id);
-            }}
           />
         </View>
         <View style={styles.textContainer}>
@@ -163,9 +163,7 @@ export default function OnboardingScreen() {
           { useNativeDriver: false }
         )}
         onMomentumScrollEnd={(event) => {
-          const index = Math.round(
-            event.nativeEvent.contentOffset.x / width
-          );
+          const index = Math.round(event.nativeEvent.contentOffset.x / width);
           setCurrentIndex(index);
         }}
         scrollEventThrottle={16}
@@ -297,4 +295,3 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Medium",
   },
 });
-

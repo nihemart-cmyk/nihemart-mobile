@@ -9,6 +9,7 @@ import { useProducts } from "@/hooks/useProducts";
 import useProfile from "@/hooks/useProfile";
 import { Product } from "@/integrations/supabase/products";
 import { useAuthStore } from "@/store/auth.store";
+import { useWishlistStore } from "@/store/wishlist.store";
 import { Image } from "expo-image";
 import { router, useRouter } from "expo-router";
 import { Bell, Heart, Search } from "lucide-react-native";
@@ -23,6 +24,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 const { width } = Dimensions.get("window");
 
@@ -132,6 +134,8 @@ export default function HomeScreen() {
   const { profile } = useProfile();
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
+  const { addToWishlist, removeFromWishlist, isInWishlist } =
+    useWishlistStore();
 
   // Animation ref for smooth indicator movement
   const indicatorPosition = useRef(new Animated.Value(0)).current;
@@ -193,11 +197,11 @@ export default function HomeScreen() {
               <UserAvatar
                 name={profile?.full_name || user?.user_metadata?.full_name}
                 email={user?.email}
-                size={64}
+                size={52}
               />
             </View>
             <View>
-              <Text className="text-text text-lg font-bold">
+              <Text className="text-text text-[16px] font-bold">
                 Hi,{" "}
                 {profile?.full_name ||
                   user?.user_metadata?.full_name ||
@@ -292,48 +296,99 @@ export default function HomeScreen() {
             }
           }}
           onEndReachedThreshold={0.5}
-          renderItem={({ item: product }) => (
-            <TouchableOpacity
-              className="flex-1 m-2 mb-4 bg-white rounded-xl overflow-hidden"
-              style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-              }}
-              onPress={() => router.push(`/product/${product.id}` as any)}
-            >
-              <View className="relative">
-                <Image
-                  source={{
-                    uri:
-                      product.main_image_url ||
-                      "https://via.placeholder.com/150",
-                  }}
-                  className="w-full h-36"
-                  contentFit="cover"
-                />
-                <TouchableOpacity className="absolute top-2 right-2 w-10 h-10 bg-white/90 rounded-lg items-center justify-center">
-                  <Heart size={18} color="#999" strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-              <View className="p-1">
-                <Text className="text-text text-lg font-bold" numberOfLines={1}>
-                  {product.name}
-                </Text>
-                {/* <Text
+          renderItem={({ item: product }) => {
+            const inWishlist = isInWishlist(product.id);
+
+            const handleWishlistToggle = async (e: any) => {
+              e.stopPropagation();
+
+              if (inWishlist) {
+                await removeFromWishlist(product.id);
+                Toast.show({
+                  type: "info",
+                  text1: t("common.removedFromWishlist"),
+                });
+              } else {
+                const wishlistProduct = {
+                  id: product.id,
+                  name: product.name,
+                  description: product.description || "",
+                  price: product.price,
+                  discountPrice:
+                    product.compare_at_price &&
+                    product.compare_at_price > product.price
+                      ? product.price
+                      : undefined,
+                  image:
+                    product.main_image_url || "https://via.placeholder.com/150",
+                  category: "",
+                  rating: (product as any).average_rating || 0,
+                  reviews: (product as any).review_count || 0,
+                  inStock: true,
+                  brand: "",
+                };
+                await addToWishlist(wishlistProduct);
+                Toast.show({
+                  type: "success",
+                  text1: t("common.addedToWishlist"),
+                });
+              }
+            };
+
+            return (
+              <TouchableOpacity
+                className="flex-1 m-2 mb-4 bg-white rounded-xl overflow-hidden"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 3,
+                }}
+                onPress={() => router.push(`/product/${product.id}` as any)}
+              >
+                <View className="relative">
+                  <Image
+                    source={{
+                      uri:
+                        product.main_image_url ||
+                        "https://via.placeholder.com/150",
+                    }}
+                    className="w-full h-36"
+                    contentFit="cover"
+                  />
+                  <TouchableOpacity
+                    onPress={handleWishlistToggle}
+                    className="absolute top-2 right-2 w-10 h-10 bg-white/90 rounded-lg items-center justify-center"
+                  >
+                    <Heart
+                      size={18}
+                      color={inWishlist ? "#FF4757" : "#999"}
+                      fill={inWishlist ? "#FF4757" : "none"}
+                      strokeWidth={2}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View className="p-1">
+                  <Text
+                    className="text-text text-lg font-bold"
+                    numberOfLines={1}
+                  >
+                    {product.name}
+                  </Text>
+                  {/* <Text
                   className="text-gray-400 text-sm mt-0.5"
                   numberOfLines={1}
                 >
                   Brand Name
                 </Text> */}
-                <Text className="text-primary text-base font-bold">
-                  FRW {product.price}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+                  <Text className="text-primary text-base font-bold">
+                    FRW {product.price}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
           ListFooterComponent={
             isFetchingNextPage ? (
               <View className="py-4 items-center">

@@ -1,17 +1,20 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { ShoppingCart, Heart, Truck, RotateCcw } from "lucide-react-native";
-import { useProduct } from "@/hooks/useProduct"; // Assuming this hook fetches all data
-import { useApp } from "@/contexts/AppContext";
 import Colors from "@/constants/colors";
+import { useApp } from "@/contexts/AppContext";
+import { useProduct } from "@/hooks/useProduct"; // Assuming this hook fetches all data
 import { formatCurrency } from "@/lib/utils";
+import { useWishlistStore } from "@/store/wishlist.store";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Heart, RotateCcw, ShoppingCart, Truck } from "lucide-react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-toast-message";
 
 // Import our new components
-import ProductDetailSkeleton from "@/components/skeletons/ProductDetailSkeleton";
+import DealsCarousel from "@/components/DealsCarousel"; // For similar products
 import ImageGallery from "@/components/product/ImageGallery";
 import ProductTabs from "@/components/product/ProductTabs";
-import DealsCarousel from "@/components/DealsCarousel"; // For similar products
+import ProductDetailSkeleton from "@/components/skeletons/ProductDetailSkeleton";
 
 // You'll need to update your useProduct hook and Product type to include these fields
 // Example: { product: {...}, images: [...], reviews: [...], similarProducts: [...] }
@@ -19,14 +22,20 @@ import DealsCarousel from "@/components/DealsCarousel"; // For similar products
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const { addToCart } = useApp();
+  const { addToWishlist, removeFromWishlist, isInWishlist } =
+    useWishlistStore();
   const [quantity, setQuantity] = useState(1);
+  const [inWishlist, setInWishlist] = useState(false);
 
   // IMPORTANT: Update your useProduct hook to fetch images, reviews, etc.
   const { data: productData, isLoading } = useProduct(id as string);
-  console.log({productData})
+  console.log({ productData });
 
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
 
   // Safely destructure productData. Use a fallback empty object `{}` for the initial render.
   const {
@@ -122,23 +131,37 @@ export default function ProductDetailScreen() {
     }
   }, [variations]);
 
+  useEffect(() => {
+    setInWishlist(isInWishlist(id as string));
+  }, [id, isInWishlist]);
+
   const allImages = useMemo(() => {
     let galleryImages = productImages?.map((img: any) => img.url) || [];
 
     if (singleSelectedVariation) {
-      const variantImages = productImages
-        ?.filter((img: any) => img.product_variation_id === singleSelectedVariation.id)
-        .map((img: any) => img.url) || [];
-      const generalImages = productImages
-        ?.filter((img: any) => !img.product_variation_id)
-        .map((img: any) => img.url) || [];
+      const variantImages =
+        productImages
+          ?.filter(
+            (img: any) =>
+              img.product_variation_id === singleSelectedVariation.id
+          )
+          .map((img: any) => img.url) || [];
+      const generalImages =
+        productImages
+          ?.filter((img: any) => !img.product_variation_id)
+          .map((img: any) => img.url) || [];
       galleryImages = [...variantImages, ...generalImages];
     }
 
-    if (product?.main_image_url && !galleryImages.includes(product.main_image_url)) {
+    if (
+      product?.main_image_url &&
+      !galleryImages.includes(product.main_image_url)
+    ) {
       return [product.main_image_url, ...galleryImages];
     }
-    return galleryImages.length > 0 ? galleryImages : ['https://via.placeholder.com/400'];
+    return galleryImages.length > 0
+      ? galleryImages
+      : ["https://via.placeholder.com/400"];
   }, [product?.main_image_url, productImages, singleSelectedVariation]);
 
   // --- Conditional return is now AFTER all hooks ---
@@ -156,6 +179,43 @@ export default function ProductDetailScreen() {
       }
       return newOptions;
     });
+  };
+
+  const handleWishlistToggle = async () => {
+    if (inWishlist) {
+      await removeFromWishlist(product.id);
+      setInWishlist(false);
+      Toast.show({
+        type: "info",
+        text1: t("common.removedFromWishlist"),
+        duration: 2000,
+      });
+    } else {
+      // Create product object for wishlist
+      const wishlistProduct = {
+        id: product.id,
+        name: product.name,
+        description: product.description || "",
+        price: product.price,
+        discountPrice:
+          product.compare_at_price && product.compare_at_price > product.price
+            ? product.price
+            : undefined,
+        image: product.main_image_url || "https://via.placeholder.com/150",
+        category: "",
+        rating: product.rating || 0,
+        reviews: product.reviews_count || 0,
+        inStock: inStock,
+        brand: "",
+      };
+      await addToWishlist(wishlistProduct);
+      setInWishlist(true);
+      Toast.show({
+        type: "success",
+        text1: t("common.addedToWishlist"),
+        duration: 2000,
+      });
+    }
   };
 
   const handleAddToCart = () => {
@@ -185,7 +245,13 @@ export default function ProductDetailScreen() {
     Alert.alert(
       "Added to Cart",
       `${product.name} has been added to your cart.`,
-      [{ text: "Continue Shopping" }, { text: "View Cart", onPress: () => router.push("/(tabs)/cart" as any) }]
+      [
+        { text: "Continue Shopping" },
+        {
+          text: "View Cart",
+          onPress: () => router.push("/(tabs)/cart" as any),
+        },
+      ]
     );
   };
 
@@ -193,7 +259,7 @@ export default function ProductDetailScreen() {
   const comparePrice = product.compare_at_price;
   const inStock =
     variations.length > 0
-      ? ((singleSelectedVariation?.stock ?? 0) > 0) || (product.stock ?? 0) > 0 
+      ? (singleSelectedVariation?.stock ?? 0) > 0 || (product.stock ?? 0) > 0
       : (product.stock ?? 0) > 0;
 
   const isAddToCartDisabled =
@@ -201,9 +267,10 @@ export default function ProductDetailScreen() {
 
   const getButtonText = () => {
     if (!inStock) return "Out of Stock";
-    if (variations.length > 0 && !singleSelectedVariation) return "Select Options";
+    if (variations.length > 0 && !singleSelectedVariation)
+      return "Select Options";
     return "Add to Cart";
-  }
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -213,15 +280,27 @@ export default function ProductDetailScreen() {
         <View className="p-4">
           {/* --- Product Info --- */}
           <View className="flex-row justify-between items-start mb-2">
-            <Text className="text-2xl font-bold text-text flex-1 pr-4">{product.name}</Text>
-            <TouchableOpacity className="w-12 h-12 rounded-full bg-white items-center justify-center border border-gray-200">
-              <Heart size={24} color={Colors.textSecondary} />
+            <Text className="text-2xl font-bold text-text flex-1 pr-4">
+              {product.name}
+            </Text>
+            <TouchableOpacity
+              onPress={handleWishlistToggle}
+              className="w-12 h-12 rounded-full bg-white items-center justify-center border border-gray-200"
+            >
+              <Heart
+                size={24}
+                color={inWishlist ? "#FF4757" : Colors.textSecondary}
+                fill={inWishlist ? "#FF4757" : "none"}
+                strokeWidth={1.5}
+              />
             </TouchableOpacity>
           </View>
 
           {/* --- Price --- */}
           <View className="flex-row items-baseline gap-2 mb-3">
-            <Text className="text-3xl font-bold text-primary">{formatCurrency(currentPrice)}</Text>
+            <Text className="text-3xl font-bold text-primary">
+              {formatCurrency(currentPrice)}
+            </Text>
             {comparePrice && (
               <Text className="text-lg text-textSecondary line-through">
                 {formatCurrency(comparePrice)}
@@ -268,7 +347,9 @@ export default function ProductDetailScreen() {
           {/* --- Reviews (Placeholder) --- */}
           <View className="flex-row items-center mb-6">
             {/* Add your Star component here */}
-            <Text className="text-sm text-textSecondary ml-2">{reviews?.length || 0} Reviews</Text>
+            <Text className="text-sm text-textSecondary ml-2">
+              {reviews?.length || 0} Reviews
+            </Text>
           </View>
 
           {/* --- Delivery Info --- */}
@@ -277,15 +358,21 @@ export default function ProductDetailScreen() {
               <Truck size={20} color={Colors.success} />
               <View>
                 <Text className="font-semibold text-success">We Deliver</Text>
-                <Text className="text-sm text-textSecondary">Delivery fee calculated at checkout.</Text>
+                <Text className="text-sm text-textSecondary">
+                  Delivery fee calculated at checkout.
+                </Text>
               </View>
             </View>
             <View className="h-px bg-gray-200" />
             <View className="flex-row items-center gap-3">
               <RotateCcw size={20} color={Colors.primary} />
               <View>
-                <Text className="font-semibold text-primary">Return Delivery</Text>
-                <Text className="text-sm text-textSecondary">Return within 24 hours. Details</Text>
+                <Text className="font-semibold text-primary">
+                  Return Delivery
+                </Text>
+                <Text className="text-sm text-textSecondary">
+                  Return within 24 hours. Details
+                </Text>
               </View>
             </View>
           </View>
@@ -293,32 +380,42 @@ export default function ProductDetailScreen() {
 
         {/* --- Tabs Section --- */}
         <View className="px-4">
-          <ProductTabs description={product.description || 'No description available.'} reviews={reviews} />
+          <ProductTabs
+            description={product.description || "No description available."}
+            reviews={reviews}
+          />
         </View>
 
         {/* --- Similar Items Section --- */}
         {similarProducts && similarProducts.length > 0 && (
-            <View className="mt-8">
-                <Text className="text-xl font-bold text-text px-4 mb-4">
-                    Similar Items You Might Also Like
-                </Text>
-                <DealsCarousel products={similarProducts as any} />
-            </View>
+          <View className="mt-8">
+            <Text className="text-xl font-bold text-text px-4 mb-4">
+              Similar Items You Might Also Like
+            </Text>
+            <DealsCarousel products={similarProducts as any} />
+          </View>
         )}
 
         {/* Spacer to prevent content from hiding behind the footer */}
         <View className="h-28" />
-
       </ScrollView>
 
       {/* --- Sticky Footer for Actions --- */}
       <View className="absolute bottom-0 left-0 right-0 flex-row p-3 space-x-3 bg-white border-t border-gray-200 items-center">
         <View className="flex-row items-center border border-gray-300 rounded-lg">
-          <TouchableOpacity className="w-12 h-12 items-center justify-center" onPress={() => setQuantity(Math.max(1, quantity - 1))}>
+          <TouchableOpacity
+            className="w-12 h-12 items-center justify-center"
+            onPress={() => setQuantity(Math.max(1, quantity - 1))}
+          >
             <Text className="text-primary text-2xl font-bold">−</Text>
           </TouchableOpacity>
-          <Text className="text-text text-lg font-bold min-w-[40px] text-center">{quantity}</Text>
-          <TouchableOpacity className="w-12 h-12 items-center justify-center" onPress={() => setQuantity(quantity + 1)}>
+          <Text className="text-text text-lg font-bold min-w-[40px] text-center">
+            {quantity}
+          </Text>
+          <TouchableOpacity
+            className="w-12 h-12 items-center justify-center"
+            onPress={() => setQuantity(quantity + 1)}
+          >
             <Text className="text-primary text-2xl font-bold">+</Text>
           </TouchableOpacity>
         </View>
@@ -329,7 +426,9 @@ export default function ProductDetailScreen() {
           disabled={isAddToCartDisabled}
         >
           <ShoppingCart size={20} color="white" />
-          <Text className="text-white text-base font-bold">{getButtonText()}</Text>
+          <Text className="text-white text-base font-bold">
+            {getButtonText()}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
