@@ -3,176 +3,287 @@ import Colors from "@/constants/colors";
 import i18n from "@/locales/i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { Check, Globe } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { ArrowRight, Check, Search } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Animated, Text, TouchableOpacity, View } from "react-native";
+import {
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type Language = "en" | "rw";
+type Language = "en" | "rw" | "id" | "zh" | "de";
+
+interface LanguageOption {
+  code: Language;
+  name: string;
+  nativeName: string;
+  flagCode: "en" | "rw";
+}
 
 export default function LanguageSelectScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 9,
-        tension: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    const loadSavedLanguage = async () => {
+      try {
+        const savedLanguage = await AsyncStorage.getItem("language");
+        if (savedLanguage && (savedLanguage === "en" || savedLanguage === "rw")) {
+          setSelectedLanguage(savedLanguage as Language);
+          await i18n.changeLanguage(savedLanguage);
+        }
+      } catch (error) {
+        console.log("Error loading saved language:", error);
+      }
+    };
+    loadSavedLanguage();
   }, []);
+
+  const allLanguages: LanguageOption[] = [
+    {
+      code: "en",
+      name: "English",
+      nativeName: "English",
+      flagCode: "en",
+    },
+    {
+      code: "rw",
+      name: "Kinyarwanda",
+      nativeName: "Ikinyarwanda",
+      flagCode: "rw",
+    },
+    {
+      code: "id",
+      name: "Bahasa Indonesia",
+      nativeName: "Bahasa Indonesia",
+      flagCode: "en", // Using placeholder flag
+    },
+    {
+      code: "zh",
+      name: "Chinese",
+      nativeName: "中文",
+      flagCode: "en", // Using placeholder flag
+    },
+    {
+      code: "de",
+      name: "Deutsch",
+      nativeName: "Deutsch",
+      flagCode: "en", // Using placeholder flag
+    },
+  ];
+
+  const filteredLanguages = allLanguages.filter(
+    (lang) =>
+      lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lang.nativeName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleLanguageSelect = async (language: Language) => {
     setSelectedLanguage(language);
-    await i18n.changeLanguage(language);
+    // Only change i18n for supported languages
+    if (language === "en" || language === "rw") {
+      await i18n.changeLanguage(language);
+    }
   };
 
   const handleContinue = async () => {
     try {
-      await AsyncStorage.setItem("language", selectedLanguage);
+      // Only save supported languages
+      if (selectedLanguage === "en" || selectedLanguage === "rw") {
+        await AsyncStorage.setItem("language", selectedLanguage);
+      }
       await AsyncStorage.setItem("hasSelectedLanguage", "true");
-      router.replace("/(tabs)");
+      
+      // Check if onboarding has been completed
+      const hasCompletedOnboarding = await AsyncStorage.getItem(
+        "hasCompletedOnboarding"
+      );
+      
+      if (!hasCompletedOnboarding) {
+        router.replace("/onboarding");
+      } else {
+        // Check auth state
+        const { useAuthStore } = await import("@/store/auth.store");
+        const user = useAuthStore.getState().user;
+        if (user) {
+          router.replace("/(tabs)");
+        } else {
+          router.replace("/signin");
+        }
+      }
     } catch (error) {
       console.log("Error saving language:", error);
     }
   };
 
-  const languages = [
-    {
-      code: "en" as Language,
-      name: t("languageSelection.english"),
-      nativeName: t("languageSelection.nativeEnglish"),
-    },
-    {
-      code: "rw" as Language,
-      name: t("languageSelection.kinyarwanda"),
-      nativeName: t("languageSelection.nativeKinyarwanda"),
-    },
-  ];
+  const renderLanguageItem = ({ item }: { item: LanguageOption }) => {
+    const isSelected = selectedLanguage === item.code;
+    const isSupported = item.code === "en" || item.code === "rw";
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleLanguageSelect(item.code)}
+        activeOpacity={0.7}
+        style={[
+          styles.languageItem,
+          isSelected && styles.languageItemSelected,
+        ]}
+      >
+        <View style={styles.languageItemContent}>
+          <View style={styles.flagContainer}>
+            <Flag code={item.flagCode} size={32} />
+          </View>
+          <Text style={styles.languageName}>{item.nativeName}</Text>
+        </View>
+        {isSelected && (
+          <View style={styles.checkmarkContainer}>
+            <Check size={20} color={Colors.primary} strokeWidth={3} />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView
-      className="flex-1"
-      style={{ backgroundColor: Colors.background }}
+      style={styles.container}
       edges={["top", "bottom"]}
     >
-      <Animated.View
-        className="flex-1 px-6 justify-center"
-        style={{
-          opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }],
-        }}
-      >
-        {/* Icon */}
-        <View className="items-center mb-8">
-          <View
-            className="w-24 h-24 rounded-full items-center justify-center"
-            style={{
-              backgroundColor: Colors.primary + "15",
-            }}
-          >
-            <Globe size={48} color={Colors.primary} strokeWidth={1.8} />
-          </View>
-        </View>
-
-        {/* Title */}
-        <Text
-          className="text-3xl font-bold text-center mb-3"
-          style={{ color: Colors.text }}
-        >
-          {t("languageSelection.title")}
-        </Text>
-        <Text
-          className="text-base text-center mb-12 px-4"
-          style={{ color: Colors.textSecondary }}
-        >
-          {t("languageSelection.subtitle")}
-        </Text>
-
-        {/* Language Options */}
-        <View className="w-full max-w-[400px] mx-auto gap-3 mb-8">
-          {languages.map((language) => {
-            const isSelected = selectedLanguage === language.code;
-            return (
-              <TouchableOpacity
-                key={language.code}
-                onPress={() => handleLanguageSelect(language.code)}
-                activeOpacity={0.7}
-                className="flex-row items-center justify-between rounded-2xl p-2 bg-white border"
-                style={{
-                  borderColor: isSelected ? Colors.primary : Colors.border,
-                  borderWidth: isSelected ? 2 : 1,
-                }}
-              >
-                <View className="flex-row items-center flex-1">
-                  <View style={{ marginRight: 12 }}>
-                    <Flag code={language.code} size={36} />
-                  </View>
-                  <View className="flex-1">
-                    <Text
-                      className="text-lg font-semibold mb-0.5"
-                      style={{ color: Colors.text }}
-                    >
-                      {language.nativeName}
-                    </Text>
-                    <Text
-                      className="text-sm"
-                      style={{ color: Colors.textSecondary }}
-                    >
-                      {language.name}
-                    </Text>
-                  </View>
-                </View>
-                {isSelected ? (
-                  <View
-                    className="w-6 h-6 rounded-full items-center justify-center"
-                    style={{ backgroundColor: Colors.primary }}
-                  >
-                    <Check size={16} color="#fff" strokeWidth={3} />
-                  </View>
-                ) : (
-                  <View
-                    className="w-6 h-6 rounded-full border-2"
-                    style={{ borderColor: Colors.border }}
-                  />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Continue Button */}
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerButton} />
+        <Text style={styles.headerTitle}>Select Language</Text>
         <TouchableOpacity
           onPress={handleContinue}
-          activeOpacity={0.8}
-          className="items-center rounded-2xl py-3 "
-          style={{
-            backgroundColor: Colors.secondary,
-          }}
+          style={styles.headerButton}
+          activeOpacity={0.7}
         >
-          <Text
-            className="text-lg font-semibold"
-            style={{ color: Colors.white }}
-          >
-            {t("languageSelection.continue")}
-          </Text>
+          <Text style={styles.continueText}>Continue</Text>
+          <ArrowRight size={20} color={Colors.primary} strokeWidth={2} />
         </TouchableOpacity>
-        <Text className="text-center">
-          You can change this later in the settings
-        </Text>
-      </Animated.View>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Search size={20} color={Colors.textSecondary} strokeWidth={2} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search language"
+          placeholderTextColor={Colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* Language List */}
+      <FlatList
+        data={filteredLanguages}
+        renderItem={renderLanguageItem}
+        keyExtractor={(item) => item.code}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  headerButton: {
+    minWidth: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 4,
+  },
+  continueText: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontFamily: "Poppins-SemiBold",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.text,
+    fontFamily: "Poppins-SemiBold",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+    fontFamily: "Poppins-Regular",
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  languageItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  languageItemSelected: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
+    backgroundColor: Colors.primary + "08",
+  },
+  languageItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  flagContainer: {
+    marginRight: 16,
+  },
+  languageName: {
+    fontSize: 16,
+    color: Colors.text,
+    fontFamily: "Poppins-Medium",
+  },
+  checkmarkContainer: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

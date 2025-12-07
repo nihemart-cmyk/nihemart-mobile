@@ -23,34 +23,70 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
    const router = useRouter();
    const segments = useSegments();
-   const [hasCheckedLanguage, setHasCheckedLanguage] = useState(false);
+   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
    const authLoading = useAuthStore((s) => s.loading);
+   const user = useAuthStore((s) => s.user);
 
    useEffect(() => {
-      const checkLanguageSelection = async () => {
+      const checkOnboardingFlow = async () => {
          try {
             const hasSelectedLanguage = await AsyncStorage.getItem(
                "hasSelectedLanguage"
             );
+            const hasCompletedOnboarding = await AsyncStorage.getItem(
+               "hasCompletedOnboarding"
+            );
 
-            if (!hasSelectedLanguage && segments[0] !== "language-select") {
-               router.replace("/language-select");
+            const currentRoute = segments[0];
+
+            // Don't redirect if already on one of these screens
+            if (
+               currentRoute === "language-select" ||
+               currentRoute === "onboarding" ||
+               currentRoute === "signin" ||
+               currentRoute === "signup"
+            ) {
+               setHasCheckedOnboarding(true);
+               return;
             }
+
+            // Step 1: Check language selection
+            if (!hasSelectedLanguage) {
+               router.replace("/language-select");
+               setHasCheckedOnboarding(true);
+               return;
+            }
+
+            // Step 2: Check onboarding completion
+            if (!hasCompletedOnboarding) {
+               router.replace("/onboarding");
+               setHasCheckedOnboarding(true);
+               return;
+            }
+
+            // Step 3: Check authentication
+            if (!user) {
+               router.replace("/signin");
+               setHasCheckedOnboarding(true);
+               return;
+            }
+
+            // All checks passed
+            setHasCheckedOnboarding(true);
          } catch (error) {
-            console.log("Error checking language selection:", error);
-         } finally {
-            setHasCheckedLanguage(true);
+            console.log("Error checking onboarding flow:", error);
+            setHasCheckedOnboarding(true);
          }
       };
 
-      checkLanguageSelection();
-   }, []);
+      checkOnboardingFlow();
+   }, [segments, user]);
 
-   // Wait for both language check and auth initialization. If auth is still
+   // Wait for both onboarding check and auth initialization. If auth is still
    // loading we may not yet know the user's roles, which determine whether
    // they should be routed into the rider flow. Returning null prevents a
    // premature redirect.
-   if (!hasCheckedLanguage || authLoading) {
+   if (!hasCheckedOnboarding || authLoading) {
       return null;
    }
 
@@ -58,6 +94,18 @@ function RootLayoutNav() {
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
          <Stack.Screen
             name="language-select"
+            options={{ headerShown: false }}
+         />
+         <Stack.Screen
+            name="onboarding"
+            options={{ headerShown: false }}
+         />
+         <Stack.Screen
+            name="signin"
+            options={{ headerShown: false }}
+         />
+         <Stack.Screen
+            name="signup"
             options={{ headerShown: false }}
          />
          <Stack.Screen

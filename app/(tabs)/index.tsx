@@ -6,7 +6,9 @@ import Colors from "@/constants/colors";
 import { useApp } from "@/contexts/AppContext";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
+import useProfile from "@/hooks/useProfile";
 import { Product } from "@/integrations/supabase/products";
+import { useAuthStore } from "@/store/auth.store";
 import { Image } from "expo-image";
 import { router, useRouter } from "expo-router";
 import { Bell, Heart, Search } from "lucide-react-native";
@@ -62,10 +64,72 @@ const HomeScreenHeader = ({
   );
 };
 
+// Avatar component that shows initials or default icon
+const UserAvatar = ({
+  name,
+  email,
+  size = 64,
+}: {
+  name?: string | null;
+  email?: string | null;
+  size?: number;
+}) => {
+  const getInitials = () => {
+    if (name) {
+      const parts = name.trim().split(" ");
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  const getAvatarColor = () => {
+    const str = name || email || "user";
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = hash % 360;
+    return `hsl(${hue}, 70%, 50%)`;
+  };
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: getAvatarColor(),
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+      }}
+    >
+      <Text
+        style={{
+          color: "#FFFFFF",
+          fontSize: size * 0.35,
+          fontWeight: "600",
+          fontFamily: "Poppins-SemiBold",
+        }}
+      >
+        {getInitials()}
+      </Text>
+    </View>
+  );
+};
+
 export default function HomeScreen() {
   const { isOffline } = useApp();
   const router = useRouter();
   const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const { profile } = useProfile();
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
 
@@ -125,15 +189,21 @@ export default function HomeScreen() {
         <View className="flex-row justify-between items-center">
           {/* User Greeting with Avatar */}
           <View className="flex-row items-center flex-1">
-            <View className="w-16 h-16 rounded-full bg-gray-200 mr-3 overflow-hidden">
-              <Image
-                source={{ uri: "https://via.placeholder.com/64" }}
-                className="w-full h-full"
-                contentFit="cover"
+            <View className="mr-3">
+              <UserAvatar
+                name={profile?.full_name || user?.user_metadata?.full_name}
+                email={user?.email}
+                size={64}
               />
             </View>
             <View>
-              <Text className="text-text text-lg font-bold">Hi, Jonathan</Text>
+              <Text className="text-text text-lg font-bold">
+                Hi,{" "}
+                {profile?.full_name ||
+                  user?.user_metadata?.full_name ||
+                  user?.email?.split("@")[0] ||
+                  "there"}
+              </Text>
               <Text className="text-gray-400 text-sm">Let's go shopping</Text>
             </View>
           </View>
