@@ -83,16 +83,43 @@ export default function OnboardingScreen() {
     handleGetStarted();
   };
 
-  const renderItem = ({ item }: { item: (typeof onboardingData)[0] }) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: (typeof onboardingData)[0];
+    index: number;
+  }) => {
+    const inputRange = [
+      (index - 1) * width,
+      index * width,
+      (index + 1) * width,
+    ];
+
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.92, 1, 0.92],
+      extrapolate: "clamp",
+    });
+
+    const translateY = scrollX.interpolate({
+      inputRange,
+      outputRange: [12, 0, 12],
+      extrapolate: "clamp",
+    });
+
     return (
       <View style={styles.slide}>
-        <View style={styles.imageContainer}>
-          <Image
-            source={item.image}
-            style={styles.image}
-            resizeMode="contain"
-          />
-        </View>
+        <Animated.View
+          style={[
+            styles.imageContainer,
+            styles.imageShadow,
+            { transform: [{ scale }, { translateY }] },
+          ]}
+        >
+          <Image source={item.image} style={styles.image} resizeMode="cover" />
+        </Animated.View>
+
         <View style={styles.textContainer}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.description}>{item.description}</Text>
@@ -103,41 +130,38 @@ export default function OnboardingScreen() {
 
   const renderPagination = () => {
     return (
-      <View style={styles.pagination}>
-        {onboardingData.map((_, index) => {
-          const inputRange = [
-            (index - 1) * width,
-            index * width,
-            (index + 1) * width,
-          ];
+      <View style={styles.paginationWrap} pointerEvents="none">
+        <View style={styles.pagination}>
+          {onboardingData.map((_, index) => {
+            const inputRange = [
+              (index - 1) * width,
+              index * width,
+              (index + 1) * width,
+            ];
 
-          const dotWidth = scrollX.interpolate({
-            inputRange,
-            outputRange: [8, 24, 8],
-            extrapolate: "clamp",
-          });
+            const dotWidth = scrollX.interpolate({
+              inputRange,
+              outputRange: [8, 28, 8],
+              extrapolate: "clamp",
+            });
 
-          const opacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.3, 1, 0.3],
-            extrapolate: "clamp",
-          });
+            const opacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.35, 1, 0.35],
+              extrapolate: "clamp",
+            });
 
-          return (
-            <Animated.View
-              key={index}
-              style={[
-                styles.dot,
-                {
-                  width: dotWidth,
-                  opacity,
-                  backgroundColor:
-                    index === currentIndex ? Colors.primary : "#E5E7EB",
-                },
-              ]}
-            />
-          );
-        })}
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.dot,
+                  { width: dotWidth, opacity, backgroundColor: Colors.primary },
+                ]}
+              />
+            );
+          })}
+        </View>
       </View>
     );
   };
@@ -254,16 +278,33 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontFamily: "Poppins-Regular",
   },
+  paginationWrap: {
+    position: "absolute",
+    bottom: 160,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
   pagination: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 30,
     gap: 8,
+    backgroundColor: "rgba(255,255,255,0.0)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
   dot: {
     height: 8,
     borderRadius: 4,
+  },
+  imageShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 8,
   },
   buttonContainer: {
     paddingHorizontal: 20,
@@ -276,6 +317,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 6,
   },
   primaryButtonText: {
     color: "#FFFFFF",
@@ -287,6 +333,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
+    backgroundColor: "transparent",
   },
   secondaryButtonText: {
     color: Colors.primary,
