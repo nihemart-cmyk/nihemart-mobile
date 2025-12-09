@@ -59,24 +59,24 @@ export default function LanguageSelectScreen() {
       nativeName: "Ikinyarwanda",
       flagCode: "rw",
     },
-    {
-      code: "id",
-      name: "Bahasa Indonesia",
-      nativeName: "Bahasa Indonesia",
-      flagCode: "en", // Using placeholder flag
-    },
-    {
-      code: "zh",
-      name: "Chinese",
-      nativeName: "中文",
-      flagCode: "en", // Using placeholder flag
-    },
-    {
-      code: "de",
-      name: "Deutsch",
-      nativeName: "Deutsch",
-      flagCode: "en", // Using placeholder flag
-    },
+    // {
+    //   code: "id",
+    //   name: "Bahasa Indonesia",
+    //   nativeName: "Bahasa Indonesia",
+    //   flagCode: "en", // Using placeholder flag
+    // },
+    // {
+    //   code: "zh",
+    //   name: "Chinese",
+    //   nativeName: "中文",
+    //   flagCode: "en", // Using placeholder flag
+    // },
+    // {
+    //   code: "de",
+    //   name: "Deutsch",
+    //   nativeName: "Deutsch",
+    //   flagCode: "en", // Using placeholder flag
+    // },
   ];
 
   const filteredLanguages = allLanguages.filter(
@@ -158,7 +158,7 @@ export default function LanguageSelectScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerButton} />
+        {/* <View style={styles.headerButton} /> */}
         <Text style={styles.headerTitle}>Select Language</Text>
         <TouchableOpacity
           onPress={handleContinue}
