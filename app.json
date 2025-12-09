@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "nihemart-mobile",
-    "slug": "nihemart-mobile",
+    "slug": "nihemart",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,7 +39,7 @@
           "icon": "./assets/images/icon.png",
           "color": "#ffffff",
           "defaultChannel": "default",
-          "sounds": [ ],
+          "sounds": [],
           "enableBackgroundRemoteNotifications": false
         }
       ]
@@ -51,8 +51,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "90ea9047-1ede-4cec-b0ec-1d389fe94634"
+        "projectId": "ed325566-09cc-43ba-959e-0d4e5eeece55"
       }
-    }
+    },
+    "owner": "nihemarts-organization"
   }
 }

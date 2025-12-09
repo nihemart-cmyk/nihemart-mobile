@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
-  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,23 +18,22 @@ const { width, height } = Dimensions.get("window");
 const onboardingData = [
   {
     id: "1",
-    title: "Various Collections Of The Latest Products",
+    title: "Rare Products",
     description:
-      "Urna amet, suspendisse ullamcorper ac elit diam facilisis cursus vestibulum.",
+      "Products you can't find in Rwanda now delivered to you in 40 minutes.",
     image: require("@/assets/images/1.webp"),
   },
   {
     id: "2",
-    title: "Various Collections Of The Latest Products",
+    title: "Easy Delivery",
     description:
-      "Urna amet, suspendisse ullamcorper ac elit diam facilisis cursus vestibulum.",
+      "If you are in province don't worry — everyone deserves access to our rare products.",
     image: require("@/assets/images/2.webp"),
   },
   {
     id: "3",
-    title: "Find The Most Suitable Outfit For You",
-    description:
-      "Urna amet, suspendisse ullamcorper ac elit diam facilisis cursus vestibulum.",
+    title: "Buy Now, Pay Later",
+    description: "You like it, we bring it, you pay later.",
     image: require("@/assets/images/3.webp"),
   },
 ];
@@ -44,8 +42,22 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<any>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
+
+  const onScrollAnimated = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: false }
+  );
+
+  const handleScroll = (event: any) => {
+    // update animated value
+    onScrollAnimated(event);
+
+    const x = event.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(x / width);
+    setCurrentIndex((prev) => (prev === newIndex ? prev : newIndex));
+  };
 
   // If user is already authenticated, skip onboarding and go to home
   useEffect(() => {
@@ -61,13 +73,56 @@ export default function OnboardingScreen() {
     }
   }, [user]);
 
+  const scrollToOffsetSafe = (offset: number) => {
+    const node = flatListRef.current?.getNode
+      ? flatListRef.current.getNode()
+      : flatListRef.current;
+
+    if (node?.scrollToOffset) {
+      node.scrollToOffset({ offset, animated: true });
+      return true;
+    }
+
+    return false;
+  };
+
+  const scrollToIndexSafe = (index: number) => {
+    const node = flatListRef.current?.getNode
+      ? flatListRef.current.getNode()
+      : flatListRef.current;
+
+    if (node?.scrollToIndex) {
+      node.scrollToIndex({ index, animated: true });
+      return true;
+    }
+
+    return false;
+  };
+
   const handleNext = () => {
     if (currentIndex < onboardingData.length - 1) {
       const nextIndex = currentIndex + 1;
-      flatListRef.current?.scrollToIndex({ index: nextIndex });
+      // Prefer scrolling by offset so we don't need getItemLayout
+      const offset = nextIndex * width;
+      if (!scrollToOffsetSafe(offset)) {
+        // fallback to index-based scroll
+        scrollToIndexSafe(nextIndex);
+      }
+
       setCurrentIndex(nextIndex);
     } else {
       handleGetStarted();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      const prevIndex = currentIndex - 1;
+      const offset = prevIndex * width;
+      if (!scrollToOffsetSafe(offset)) {
+        scrollToIndexSafe(prevIndex);
+      }
+      setCurrentIndex(prevIndex);
     }
   };
 
@@ -168,7 +223,15 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.skipContainer}>
+      <View style={styles.topContainer}>
+        {currentIndex > 0 ? (
+          <TouchableOpacity onPress={handleBack} style={styles.backContainer}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.backPlaceholder} />
+        )}
+
         <TouchableOpacity onPress={handleSkip}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -182,10 +245,7 @@ export default function OnboardingScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={handleScroll}
         onMomentumScrollEnd={(event) => {
           const index = Math.round(event.nativeEvent.contentOffset.x / width);
           setCurrentIndex(index);
@@ -238,6 +298,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textSecondary,
     fontWeight: "500",
+  },
+  topContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  backContainer: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  backText: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: "500",
+  },
+  backPlaceholder: {
+    width: 60,
   },
   slide: {
     width,
@@ -332,7 +411,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 6,
     backgroundColor: "transparent",
   },
   secondaryButtonText: {
