@@ -59,6 +59,21 @@ export default function OnboardingScreen() {
     setCurrentIndex((prev) => (prev === newIndex ? prev : newIndex));
   };
 
+  // Animated opacity for the secondary button (Already Have an Account)
+  const lastIndex = onboardingData.length - 1;
+  const secondaryOpacity = useRef(
+    new Animated.Value(currentIndex === lastIndex ? 1 : 0)
+  ).current;
+
+  React.useEffect(() => {
+    const toValue = currentIndex === lastIndex ? 1 : 0;
+    Animated.timing(secondaryOpacity, {
+      toValue,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [currentIndex, lastIndex, secondaryOpacity]);
+
   // If user is already authenticated, skip onboarding and go to home
   useEffect(() => {
     if (user) {
@@ -185,7 +200,7 @@ export default function OnboardingScreen() {
 
   const renderPagination = () => {
     return (
-      <View style={styles.paginationWrap} pointerEvents="none">
+      <View style={styles.paginationWrap} pointerEvents="auto">
         <View style={styles.pagination}>
           {onboardingData.map((_, index) => {
             const inputRange = [
@@ -207,13 +222,29 @@ export default function OnboardingScreen() {
             });
 
             return (
-              <Animated.View
+              <TouchableOpacity
                 key={index}
-                style={[
-                  styles.dot,
-                  { width: dotWidth, opacity, backgroundColor: Colors.primary },
-                ]}
-              />
+                activeOpacity={0.8}
+                onPress={() => {
+                  const offset = index * width;
+                  if (!scrollToOffsetSafe(offset)) {
+                    scrollToIndexSafe(index);
+                  }
+                  setCurrentIndex(index);
+                }}
+                style={styles.paginationTouchable}
+              >
+                <Animated.View
+                  style={[
+                    styles.dot,
+                    {
+                      width: dotWidth,
+                      opacity,
+                      backgroundColor: Colors.primary,
+                    },
+                  ]}
+                />
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -268,9 +299,11 @@ export default function OnboardingScreen() {
           </Text>
         </TouchableOpacity>
 
-        {currentIndex === onboardingData.length - 1 && (
+        <Animated.View
+          style={[styles.secondaryButton, { opacity: secondaryOpacity }]}
+          pointerEvents={currentIndex === lastIndex ? "auto" : "none"}
+        >
           <TouchableOpacity
-            style={styles.secondaryButton}
             onPress={() => router.push("/signin")}
             activeOpacity={0.7}
           >
@@ -278,7 +311,7 @@ export default function OnboardingScreen() {
               Already Have an Account
             </Text>
           </TouchableOpacity>
-        )}
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -373,6 +406,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
+  },
+  paginationTouchable: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   dot: {
     height: 8,
